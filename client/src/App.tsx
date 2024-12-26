@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import LoginButton from "./pages/LoginButton";
 import Callback from "./pages/Callback";
 import Dashboard from "./pages/Dashboard";
-import "./styles/index.css";
+
 
 const App: React.FC = () => {
   return (

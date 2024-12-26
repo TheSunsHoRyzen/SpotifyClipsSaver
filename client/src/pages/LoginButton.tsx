@@ -8,7 +8,7 @@ const LoginButton: React.FC = () => {
       <div className="main-heading">
         <h1>Welcome to Spotify Clip Saver</h1>
       </div>
-      <button onClick={handleLogin}>Login with Spotify</button>
+      <button className = "bg-green-500 p-2 rounded" onClick={handleLogin}>Login with Spotify</button>
     </div>
 )
 
