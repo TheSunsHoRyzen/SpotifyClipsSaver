@@ -1,10 +1,11 @@
 import { refreshToken } from "./refreshToken";
 
 export const checkToken = async () => {
+  
   const date = localStorage.getItem("date");
 
   if (!date) {
-    console.log("No expiration date found. Token check skipped.");
+    console.log("No expiration date found. Token check skipped. Please make sure you Login with Spotify before using the app!");
     return null;
   }
 

@@ -57,14 +57,14 @@ export const callback = async (req, res) => {
     }
 };
 export const refresh = async (req, res) => {
-    const { refresh_token } = req.body;
-    if (!refresh_token) {
+    const { refreshtoken } = req.body;
+    if (!refreshtoken) {
         console.log("no refresh token provided!");
         res.status(400).json({ error: "refresh token is required!" });
         return;
     }
     try {
-        const tokens = await refreshToken(refresh_token); // Pass the extracted token
+        const tokens = await refreshToken(refreshtoken); // Pass the extracted token
         res.json(tokens); // Send tokens back to the client
     }
     catch (error) {

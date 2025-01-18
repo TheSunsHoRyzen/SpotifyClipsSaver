@@ -10,7 +10,7 @@ export const refreshToken = async (refresh_token: string) => {
   })
     .then((response) => {
       if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        throw new Error(`${response.statusText}`);
       }
       return response.json();
     })

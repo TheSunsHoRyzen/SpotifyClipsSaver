@@ -12,7 +12,7 @@ const generateRandomString = (length: number) => {
 
 // const initState = generateRandomString(16);
 export const getAuthorizationUrl = (): string => {
-  const scopes = "user-read-private user-read-email";
+  const scopes = "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state";
   // console.log(`spotify client id: ${SPOTIFY_CLIENT_ID}`);
 
   const query = new URLSearchParams({
