@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
-const SPOTIFY_CLIENT_ID = "d5695b7e4d344ab6abe136e567451ed1";
-const SPOTIFY_CLIENT_SECRET = "27289aa5ed0f4806884e60added73296";
+import 'dotenv/config';
+const SPOTIFY_CLIENT_ID = String(process.env.CLIENT_ID);
+const SPOTIFY_CLIENT_SECRET =String(process.env.CLIENT_SECRET);
 const SPOTIFY_REDIRECT_URI = "http://localhost:3000/callback";
 
 const generateRandomString = (length: number) => {
