@@ -21,7 +21,10 @@ function Track({ song }: TrackProps) {
                 "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
                 "Content-Type": "application/json"
             },
-        body: JSON.stringify({uris:[song.track.uri]})
+        body: JSON.stringify({
+          position_ms: 0,
+          uri: song.track.uri
+        })
         }) 
           .catch((err) => {
           console.log(err.message);
