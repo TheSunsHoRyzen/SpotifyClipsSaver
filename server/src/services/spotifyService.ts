@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
-import 'dotenv/config';
+import "dotenv/config";
 const SPOTIFY_CLIENT_ID = String(process.env.CLIENT_ID);
-const SPOTIFY_CLIENT_SECRET =String(process.env.CLIENT_SECRET);
+const SPOTIFY_CLIENT_SECRET = String(process.env.CLIENT_SECRET);
 const SPOTIFY_REDIRECT_URI = "http://localhost:3000/callback";
 
 const generateRandomString = (length: number) => {
@@ -13,7 +13,8 @@ const generateRandomString = (length: number) => {
 
 // const initState = generateRandomString(16);
 export const getAuthorizationUrl = (): string => {
-  const scopes = "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state";
+  const scopes =
+    "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state app-remote-control";
   // console.log(`spotify client id: ${SPOTIFY_CLIENT_ID}`);
 
   const query = new URLSearchParams({
