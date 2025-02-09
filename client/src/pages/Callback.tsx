@@ -5,8 +5,7 @@ const Callback: React.FC = () => {
   const [searchParams] = useSearchParams();
   // const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string|null>(null);
-
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -30,10 +29,10 @@ const Callback: React.FC = () => {
             setAccessToken(data.access_token);
             localStorage.setItem("access_token", data.access_token);
           } else {
-
             throw new Error("No access token received");
           }
           if (data.expires_in) {
+            // console.log(data.expires_in + " EXPIRES");
             let date = Date.now();
             date = Math.floor(date / 1000);
             date += data.expires_in;
@@ -62,10 +61,12 @@ const Callback: React.FC = () => {
           <h2>Please Login with Spotify before using this App!</h2>
           <h2>{error}</h2>
         </div>
-        )}
+      )}
       {accessToken && (
         <div>
-          <h2>Access token created! You may now use any function of the website!</h2>
+          <h2>
+            Access token created! You may now use any function of the website!
+          </h2>
           <h2>{error}</h2>
         </div>
       )}

@@ -24,13 +24,11 @@ function Playlists() {
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const [offset, setOffset] = useState<number>(0);
   const [player, setPlayer] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(null);
+  // const [token, setToken] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(true);
-  const [currentTrack, setCurrentTrack] = useState("");
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [segmentStart, setSegmentStart] = useState(0);
+  // const [currentTrack, setCurrentTrack] = useState("");
+
   const limit = 20;
   useEffect(() => {
     if (localStorage.getItem("access_token")) {
@@ -74,13 +72,13 @@ function Playlists() {
         const fetchToken = async () => {
           const accesstoken = await checkToken();
           if (accesstoken) {
-            setToken(accesstoken);
+            console.log("YAY!");
           }
         };
         fetchToken();
       }
       const spotifyPlayer = new window.Spotify.Player({
-        name: "My React Web Player",
+        name: "Spotify Clip Saver",
         getOAuthToken: (cb: (token: string | null) => void) => {
           cb(localStorage.getItem("access_token"));
         },
@@ -115,10 +113,9 @@ function Playlists() {
         }) => {
           if (!state) return;
           setIsPaused(state.paused);
-          setDuration(state.duration);
-          if (state.track_window.current_track) {
-            setCurrentTrack(state.track_window.current_track.name);
-          }
+          // if (state.track_window.current_track) {
+          //   setCurrentTrack(state.track_window.current_track.name);
+          // }
         }
       );
 
@@ -237,7 +234,7 @@ function Playlists() {
         <div>
           <ul>
             {(songs as Song[]).map((song: Song) => (
-              <Track song={song} deviceID={deviceId} />
+              <Track song={song} deviceID={deviceId} player={player} />
             ))}
           </ul>
         </div>
