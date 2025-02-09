@@ -8,11 +8,11 @@ export const getAuthUrl = (req, res) => {
 // Handle the /spotify-token route to exchange the authorization code for tokens
 export const exchangeAuthCode = async (req, res) => {
     // Add types for req and res
-    console.log("In exchange Auth Code!");
+    // console.log("In exchange Auth Code!");
     const { code } = req.body; // Get code from body
     // const { state } = req.body.state;
     if (!code) {
-        console.log("no auth code provided");
+        // console.log("no auth code provided");
         res.status(400).json({ error: "Authorization code is required" });
     }
     // if (!state) {

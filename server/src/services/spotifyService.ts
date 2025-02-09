@@ -54,8 +54,8 @@ export const getAuthorizationUrl = (): string => {
 //   return await response.json();
 // };
 export const exchangeToken = async (code: string): Promise<unknown> => {
-  console.log("Made it to exchange token!");
-  console.log("authorization code IN BACKEND " + code);
+  // console.log("Made it to exchange token!");
+  // console.log("authorization code IN BACKEND " + code);
   // Construct Basic Authorization header
   const authHeader = `Basic ${Buffer.from(
     `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`

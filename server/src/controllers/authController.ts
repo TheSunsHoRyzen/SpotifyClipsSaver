@@ -18,12 +18,12 @@ export const exchangeAuthCode = async (
   res: Response
 ): Promise<void> => {
   // Add types for req and res
-  console.log("In exchange Auth Code!");
+  // console.log("In exchange Auth Code!");
 
   const { code } = req.body; // Get code from body
   // const { state } = req.body.state;
   if (!code) {
-    console.log("no auth code provided");
+    // console.log("no auth code provided");
     res.status(400).json({ error: "Authorization code is required" });
   }
   // if (!state) {

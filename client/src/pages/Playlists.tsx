@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { checkToken } from "../checkToken";
 import Track from "../components/Track";
 import { Song } from "../types/song";
-
+import Player from "../components/Player";
+import { PlayerProvider } from "../context/PlayerContext";
 declare global {
   interface Window {
     Spotify: {
@@ -184,69 +185,72 @@ function Playlists() {
     );
   };
   return (
-    <div>
-      <h1 className="flex justify-center items-center text-xl">
-        Spotify Playlists
-      </h1>
-      {/* Dropdown for Playlists */}
-      <div className="flex flex-col items-start gap-4 p-4">
-        <label className="text-lg font-semibold">
-          Choose a playlist from your library:
-        </label>
-        <select
-          className="border-2 rounded-md border-green-500/100 p-2"
-          onChange={(e) => {
-            setSelectedPlaylist(e.target.value);
-            setOffset(0);
-            setSongs([]);
-          }}
-        >
-          <option value="">--Please choose an option--</option>
-          {playlists.map((singlePlaylist: any) => (
-            <option key={singlePlaylist.id} value={singlePlaylist.id}>
-              {singlePlaylist.name}
-            </option>
-          ))}
-        </select>
-
-        {/* Pagination */}
-        <div className="flex items-center gap-4 mt-4">
-          {songs && offset > 0 && !loading && (
-            <button
-              className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
-              onClick={loadPrevPage}
-            >
-              ← Prev Page
-            </button>
-          )}
-          {songs && offset + limit < total && !loading && (
-            <button
-              className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
-              onClick={loadNextPage}
-            >
-              Next Page →
-            </button>
-          )}
-        </div>
-      </div>
-
-      {songs && (
-        <div>
-          <ul>
-            {(songs as Song[]).map((song: Song) => (
-              <Track song={song} deviceID={deviceId} player={player} />
+    <PlayerProvider>
+      <div>
+        <h1 className="flex justify-center items-center text-xl">
+          Spotify Playlists
+        </h1>
+        {/* Dropdown for Playlists */}
+        <div className="flex flex-col items-start gap-4 p-4">
+          <label className="text-lg font-semibold">
+            Choose a playlist from your library:
+          </label>
+          <select
+            className="border-2 rounded-md border-green-500/100 p-2"
+            onChange={(e) => {
+              setSelectedPlaylist(e.target.value);
+              setOffset(0);
+              setSongs([]);
+            }}
+          >
+            <option value="">--Please choose an option--</option>
+            {playlists.map((singlePlaylist: any) => (
+              <option key={singlePlaylist.id} value={singlePlaylist.id}>
+                {singlePlaylist.name}
+              </option>
             ))}
-          </ul>
-        </div>
-      )}
+          </select>
 
-      {/* {playlists ? (
-        <pre>{JSON.stringify(playlists, null, 2)}</pre> // Display playlists as formatted JSON
-      ) : (
-        <p>Loading playlists...</p>
-      )} */}
-      {loading && <p>Loading...</p>}
-    </div>
+          {/* Pagination */}
+          <div className="flex items-center gap-4 mt-4">
+            {songs && offset > 0 && !loading && (
+              <button
+                className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
+                onClick={loadPrevPage}
+              >
+                ← Prev Page
+              </button>
+            )}
+            {songs && offset + limit < total && !loading && (
+              <button
+                className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
+                onClick={loadNextPage}
+              >
+                Next Page →
+              </button>
+            )}
+          </div>
+        </div>
+
+        {songs && (
+          <div>
+            <ul>
+              {(songs as Song[]).map((song: Song) => (
+                <Track song={song} deviceID={deviceId} player={player} />
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* {playlists ? (
+          <pre>{JSON.stringify(playlists, null, 2)}</pre> // Display playlists as formatted JSON
+        ) : (
+          <p>Loading playlists...</p>
+        )} */}
+        {loading && <p>Loading...</p>}
+        <Player />
+      </div>
+    </PlayerProvider>
   );
 }
 

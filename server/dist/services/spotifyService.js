@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import 'dotenv/config';
+import "dotenv/config";
 const SPOTIFY_CLIENT_ID = String(process.env.CLIENT_ID);
 const SPOTIFY_CLIENT_SECRET = String(process.env.CLIENT_SECRET);
 const SPOTIFY_REDIRECT_URI = "http://localhost:3000/callback";
@@ -10,7 +10,7 @@ const generateRandomString = (length) => {
 };
 // const initState = generateRandomString(16);
 export const getAuthorizationUrl = () => {
-    const scopes = "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state";
+    const scopes = "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state app-remote-control";
     // console.log(`spotify client id: ${SPOTIFY_CLIENT_ID}`);
     const query = new URLSearchParams({
         response_type: "code",
@@ -48,8 +48,8 @@ export const getAuthorizationUrl = () => {
 //   return await response.json();
 // };
 export const exchangeToken = async (code) => {
-    console.log("Made it to exchange token!");
-    console.log("authorization code IN BACKEND " + code);
+    // console.log("Made it to exchange token!");
+    // console.log("authorization code IN BACKEND " + code);
     // Construct Basic Authorization header
     const authHeader = `Basic ${Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString("base64")}`;
     // Use URLSearchParams for the body
