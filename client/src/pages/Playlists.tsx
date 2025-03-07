@@ -187,7 +187,7 @@ function Playlists() {
   return (
     <PlayerProvider>
       <div>
-        <h1 className="flex justify-center items-center text-xl">
+        <h1 className="flex justify-center items-center text-2xl">
           Spotify Playlists
         </h1>
         {/* Dropdown for Playlists */}

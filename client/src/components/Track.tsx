@@ -97,10 +97,9 @@ function Track({ song, deviceID, player }: TrackProps) {
         console.error("Play response error:", error);
         throw new Error(`HTTP error! status: ${playResponse.status}`);
       }
-
       setCurrentSong({
         ...song.track,
-        duration: song.track.duration,
+        duration: song.track.duration_ms,
         position: 0,
         isPlaying: true,
       });
@@ -192,7 +191,7 @@ function Track({ song, deviceID, player }: TrackProps) {
         );
         setCurrentSong({
           ...song.track,
-          duration: song.track.duration,
+          duration: song.track.duration_ms,
           position: 0,
           isPlaying: false,
         });

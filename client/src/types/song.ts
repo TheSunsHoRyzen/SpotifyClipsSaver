@@ -5,6 +5,6 @@ export type Song = {
     artists: { name: string }[];
     id: number;
     uri: string;
-    duration: number;
+    duration_ms: number;
   };
 };
