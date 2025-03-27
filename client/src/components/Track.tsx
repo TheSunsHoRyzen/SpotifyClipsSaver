@@ -208,12 +208,117 @@ function Track({ song, deviceID, player }: TrackProps) {
   //     console.log("Toggled playback!");
   //   });
   // }, [player]);
+  const handleAuth = useCallback(async () => {
+    if (!deviceID) {
+      console.error("No device ID available");
+      return;
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      console.error("No access token available");
+      return;
+    }
+    // playback transfer logic goes here if need be, with catch going after if !(playerResponse)
+    try {
+      const playerState = await fetch("https://api.spotify.com/v1/me/player", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+
+      if (playerState.status === 204) {
+        console.log("No active device found, transferring playback...");
+      }
+
+      // Transfer playback
+      await fetch("https://api.spotify.com/v1/me/player", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({
+          device_ids: [deviceID],
+          play: false,
+        }),
+      });
+
+      // Wait for transfer
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Start playback
+      const playResponse = await fetch(
+        `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            uris: [song.track.uri],
+            position_ms: 23000,
+          }),
+        }
+      );
+
+      if (!playResponse.ok) {
+        const error = await playResponse.json();
+        console.error("Play response error:", error);
+        throw new Error(`HTTP error! status: ${playResponse.status}`);
+      }
+      setCurrentSong({
+        ...song.track,
+        duration: song.track.duration_ms,
+        position: 23 / song.track.duration_ms,
+        isPlaying: true,
+      });
+    } catch (err) {
+      console.error("Error in handlePlay:", err);
+    }
+    // Try to refresh token on error
+  }, [deviceID, song.track, setCurrentSong]);
+
+  // const access_token = localStorage.getItem("access_token");
+  // const userID = localStorage.getItem("user_id");
+
+  // if (!access_token || !userID) {
+  //   alert("Please login first");
+  //   return;
+  // }
+
+  // try {
+  //   // Send both tokens to our backend
+  //   const response = await fetch(
+  //     `http://localhost:8080/auth/db?auth_token=${access_token}&userID=${userID}&uri=${song.track.uri}`,
+  //     {
+  //       method: "GET",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //     }
+  //   );
+
+  //   const data = await response.json();
+
+  //   if (!response.ok) {
+  //     // If response is not 200, show the error message from the backend
+  //     alert(data.error);
+  //     return;
+  //   }
+
+  //   alert(data.message); // Show the success message from backend
+  // } catch (error) {
+  //   console.error("Error:", error);
+  //   alert("Failed to verify user");
+  // }
 
   return (
     <div>
       <li key={song.track.id}>
         <div className="flex flex-col items-start p-4 ">
-          <h3 className="">
+          <h3 className="flex items-center">
             {song.track.name} by{" "}
             {song.track.artists.map((artist, index) => (
               <span key={index} className="font-bold">
@@ -221,6 +326,13 @@ function Track({ song, deviceID, player }: TrackProps) {
                 {index < song.track.artists.length - 1 ? ", " : ""}
               </span>
             ))}
+            <button
+              className="box-border p-2 m-1 rounded-2xl bg-red-500 flex items-center justify-center h-6 ml-2"
+              onClick={handleAuth}
+            >
+              {" "}
+              +
+            </button>
           </h3>
           <button
             className="text-green-500 hover:text-green-400 "

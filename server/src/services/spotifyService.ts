@@ -1,15 +1,18 @@
 import fetch from "node-fetch";
 import "dotenv/config";
+import { db } from "../firebase.js";
+import {
+  collection,
+  doc,
+  updateDoc,
+  addDoc,
+  setDoc,
+  getDoc,
+  deleteDoc,
+} from "firebase/firestore";
 const SPOTIFY_CLIENT_ID = String(process.env.CLIENT_ID);
 const SPOTIFY_CLIENT_SECRET = String(process.env.CLIENT_SECRET);
 const SPOTIFY_REDIRECT_URI = "http://localhost:3000/callback";
-
-const generateRandomString = (length: number) => {
-  const possible =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const values = crypto.getRandomValues(new Uint8Array(length));
-  return values.reduce((acc, x) => acc + possible[x % possible.length], "");
-};
 
 // const initState = generateRandomString(16);
 export const getAuthorizationUrl = (): string => {
@@ -135,5 +138,84 @@ export const refreshToken = async (refresh_token: string): Promise<unknown> => {
   } catch (error) {
     console.error("Error sending refresh token request!:", error);
     throw error;
+  }
+};
+
+interface SpotifyUserResponse {
+  id: string;
+  display_name: string;
+  email: string;
+  // Add other fields as needed
+}
+
+export const verifyUser = async (
+  accessToken: string
+): Promise<{ id: string }> => {
+  const response = await fetch("https://api.spotify.com/v1/me", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify user: ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as SpotifyUserResponse;
+  return { id: data.id };
+};
+
+interface UserData {
+  playlists: string[];
+  favorites: string[];
+  settings: {
+    theme: string;
+    language: string;
+  };
+}
+
+// Mock database function
+export const getUserClipData = async (userId: strin, uri: string) => {
+  try {
+    const docRef = doc(db, userId, uri);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return docSnap;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error("Error getting document:", error);
+  }
+};
+
+export const createUserClip = async (
+  userID: string,
+  uri: string,
+  userData: object
+) => {
+  try {
+    const check = await getUserClipData(userID);
+    if (check === null) {
+      await addDoc(collection(db, userID), userData);
+      await setDoc(doc(db, userID, uri), userData);
+    } else {
+      await setDoc(doc(db, userID, uri), userData);
+    }
+  } catch (error) {
+    console.error("Error adding document:", error);
+  }
+};
+
+export const updateUser = async (userId: string, changes: object) => {
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, { changes });
+    console.log("Document successfully updated!");
+  } catch (error) {
+    console.error("Error updating document:", error);
   }
 };

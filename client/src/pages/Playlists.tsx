@@ -142,28 +142,48 @@ function Playlists() {
       };
       fetchToken();
       setLoading(true);
-      fetch(
-        `https://api.spotify.com/v1/playlists/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
+
+      // Fetch all clips
+      const fetchAllClips = async () => {
+        try {
+          const response = await fetch("http://localhost:8080/clips");
+          if (!response.ok) {
+            throw new Error("Failed to fetch clips");
+          }
+          return await response.json();
+        } catch (error) {
+          console.error("Error fetching clips:", error);
+          return {};
         }
-      )
-        .then((response) => {
+      };
+
+      // Fetch songs and merge with clips
+      Promise.all([
+        fetch(
+          `https://api.spotify.com/v1/playlists/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        ).then((response) => {
           if (!response.ok) {
             throw new Error(
               `Could not get available playlists ${response.statusText}`
             );
           }
           return response.json();
-        })
-        .then((allSongs) => {
-          // console.log(allSongs);
-          // console.log(allSongs.items.length);
-          // console.log(allSongs.items);
+        }),
+        fetchAllClips(),
+      ])
+        .then(([allSongs, allClips]) => {
           setTotal(allSongs.total);
-          setSongs(allSongs.items);
+          const songsWithClips = allSongs.items.map((song: Song) => {
+            const songUri = song.track.uri;
+            const clips = allClips[songUri] || { startTimes: [], endTimes: [] };
+            return { ...song, clips };
+          });
+          setSongs(songsWithClips);
           setLoading(false);
         })
         .catch((err) => {
@@ -253,5 +273,65 @@ function Playlists() {
     </PlayerProvider>
   );
 }
-
 export default Playlists;
+
+//   1. one collection which has one document
+
+//   document -> {
+//     clips: {
+//       "song uri": {
+//         startTimes: []
+//         endTimes: []
+//       }
+//     }
+//   }
+
+//   2.
+
+//   download the "clips" object from firbease
+
+//   a. you go through each song (by looping through the keys)
+//   b. match song uri with current songs that you have stored in-memory on the client
+//   c. modify it -> add the clips information from the firebase to that specific song
+
+// backend/database
+// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
+//   startTimes: [34,34],
+//   endTimes: [4594,40]
+// }
+
+// 1. get from spotify
+// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
+//   ...songmetadata
+//   clips: {
+//     startTimes: [],
+//     endTimes: []
+//   }
+// }
+
+// 2. add the clips from database
+// clips {
+
+// }
+
+// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
+//   ...songmetadata
+//   clips: {
+//     startTimes: [],
+//     endTimes: []
+//   }
+// }
+
+// 3. then we have the full thing
+// 4.
+
+// frontend:
+// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
+//   ...songmetadata
+//   clips: {
+//     startTimes: [34,34],
+//     endTimes: [4594,40]
+//   }
+// }
+
+// console.log(songs["spotify:track:6rqhFgbbKwnb9MLmUQDh56"].clips.startTime[0]);

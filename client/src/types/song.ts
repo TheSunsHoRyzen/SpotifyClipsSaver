@@ -7,4 +7,8 @@ export type Song = {
     uri: string;
     duration_ms: number;
   };
+  clips: {
+    startTimes: number[];
+    endTimes: number[];
+  };
 };
