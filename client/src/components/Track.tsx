@@ -219,7 +219,7 @@ function Track({ song, deviceID, player }: TrackProps) {
       console.error("No access token available");
       return;
     }
-    // playback transfer logic goes here if need be, with catch going after if !(playerResponse)
+
     try {
       const playerState = await fetch("https://api.spotify.com/v1/me/player", {
         headers: {
@@ -268,17 +268,30 @@ function Track({ song, deviceID, player }: TrackProps) {
         console.error("Play response error:", error);
         throw new Error(`HTTP error! status: ${playResponse.status}`);
       }
+
       setCurrentSong({
         ...song.track,
         duration: song.track.duration_ms,
         position: 23 / song.track.duration_ms,
         isPlaying: true,
       });
+
+      // Set up a loop to repeat the segment from 23s to 26s
+      const loopInterval = setInterval(async () => {
+        const state = await player.getCurrentState();
+        if (state && state.position >= 26000) {
+          player.seek(23000).then(() => {
+            console.log("Looped back to 23 seconds");
+          });
+        }
+      }, 100); // Check every 100ms
+
+      // Cleanup interval on pause
+      return () => clearInterval(loopInterval);
     } catch (err) {
       console.error("Error in handlePlay:", err);
     }
-    // Try to refresh token on error
-  }, [deviceID, song.track, setCurrentSong]);
+  }, [deviceID, song.track, setCurrentSong, player]);
 
   // const access_token = localStorage.getItem("access_token");
   // const userID = localStorage.getItem("user_id");
@@ -323,7 +336,7 @@ function Track({ song, deviceID, player }: TrackProps) {
             {song.track.artists.map((artist, index) => (
               <span key={index} className="font-bold">
                 {artist.name}
-                {index < song.track.artists.length - 1 ? ", " : ""}
+                {index < song.track.artists.length - 1 ? ", " : " "}
               </span>
             ))}
             <button
