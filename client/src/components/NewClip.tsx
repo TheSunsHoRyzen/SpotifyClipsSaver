@@ -1,7 +1,11 @@
 import React from "react";
 
 function NewClip() {
-  return <div></div>;
+  return (
+    <div>
+      <h4>hi</h4>
+    </div>
+  );
 }
 
 export default NewClip;

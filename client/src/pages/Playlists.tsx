@@ -16,6 +16,31 @@ declare global {
     onSpotifyWebPlaybackSDKReady: () => void;
   }
 }
+interface Clip {
+  id: string;
+  start: number;
+  end: number;
+}
+
+interface Clips {
+  [uri: string]: {
+    [id: string]: Clip;
+  };
+}
+
+// [
+//   c1 <--- you know that the person is clicking on the first index of the array
+//   c2
+//   c3
+// ]
+
+// new array -> override the whole thing
+
+// [
+//   c1'
+//   c2
+//   c3
+// ]
 
 function Playlists() {
   const [loading, setLoading] = useState(false);
@@ -203,6 +228,23 @@ function Playlists() {
     setOffset((prevOffset) =>
       prevOffset - limit > 0 ? prevOffset - limit : 0
     );
+  };
+
+  const fetchData = () => {
+    const clips = {
+      "spotify:track:4Pwn87M3DUX1Yk0pIQOmFf": [
+        {
+          start: 12,
+          end: 22,
+        },
+        {
+          start: 34,
+          end: 65,
+        },
+      ],
+    };
+
+    return clips;
   };
   return (
     <PlayerProvider>

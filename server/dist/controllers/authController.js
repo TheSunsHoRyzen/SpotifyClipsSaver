@@ -1,4 +1,4 @@
-import { getAuthorizationUrl, exchangeToken, refreshToken, verifyUser, getUserClipData, } from "../services/spotifyService.js";
+import { getAuthorizationUrl, exchangeToken, refreshToken, verifyUser, getUserClipData, createUserClip, } from "../services/spotifyService.js";
 // Handle the /spotify-auth-url route to return the authorization URL
 export const getAuthUrl = (req, res) => {
     // Add types for req and res
@@ -73,7 +73,7 @@ export const refresh = async (req, res) => {
     }
 };
 export const getDB = async (req, res) => {
-    const { auth_token, userID } = req.query;
+    const { auth_token, userID, uri } = req.query;
     if (!auth_token || !userID) {
         res.status(400).json({ error: "Auth token and userID are required" });
         return;
@@ -87,9 +87,9 @@ export const getDB = async (req, res) => {
             return;
         }
         // Fetch mock data for the verified user
-        const userData = await getUserClipData(userID);
+        const userData = await getUserClipData(userID, uri);
         res.json({
-            message: "success",
+            userData,
         });
     }
     catch (error) {
@@ -99,14 +99,16 @@ export const getDB = async (req, res) => {
 };
 // Create user data
 export const createUserData = async (req, res) => {
-    const { userID, data } = req.body;
+    const { auth_token, userID, data, uri } = req.body;
     if (!userID || !data) {
         res.status(400).json({ error: "UserID and data are required" });
         return;
     }
     try {
         // Simulate creating user data
+        const spotifyUser = await verifyUser(auth_token);
         console.log(`Creating data for user ${userID}:`, data);
+        const response = await createUserClip(userID, data, uri);
         res.status(201).json({ message: "User data created successfully" });
     }
     catch (error) {

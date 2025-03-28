@@ -132,13 +132,14 @@ export const createUserData = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { userID, data, uri } = req.body;
+  const { auth_token, userID, data, uri } = req.body;
   if (!userID || !data) {
     res.status(400).json({ error: "UserID and data are required" });
     return;
   }
   try {
     // Simulate creating user data
+    const spotifyUser = await verifyUser(auth_token);
     console.log(`Creating data for user ${userID}:`, data);
     const response = await createUserClip(userID, data, uri);
     res.status(201).json({ message: "User data created successfully" });

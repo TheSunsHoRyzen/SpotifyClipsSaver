@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import "dotenv/config";
 import { db } from "../firebase.js";
-import { doc, updateDoc, setDoc, getDoc, } from "firebase/firestore";
+import { doc, updateDoc, getDoc, arrayUnion, } from "firebase/firestore";
 const SPOTIFY_CLIENT_ID = String(process.env.CLIENT_ID);
 const SPOTIFY_CLIENT_SECRET = String(process.env.CLIENT_SECRET);
 const SPOTIFY_REDIRECT_URI = "http://localhost:3000/callback";
@@ -128,24 +128,27 @@ export const verifyUser = async (accessToken) => {
     return { id: data.id };
 };
 // Mock database function
-export const getUserClipData = async (userId) => {
+export const getUserClipData = async (userId, uri) => {
     try {
-        const docRef = doc(db, "users", userId);
+        const docRef = doc(db, userId, uri);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-            console.log("User data:", docSnap.data());
+            return docSnap;
         }
         else {
-            console.log("No such document!");
+            return null;
         }
     }
     catch (error) {
         console.error("Error getting document:", error);
     }
 };
-export const createUserClip = async (userID, userData) => {
+export const createUserClip = async (userID, uri, userData) => {
     try {
-        await setDoc(doc(db, "users", userID), userData);
+        const songDoc = doc(db, userID, uri);
+        await updateDoc(songDoc, {
+            times: arrayUnion(userData),
+        });
     }
     catch (error) {
         console.error("Error adding document:", error);

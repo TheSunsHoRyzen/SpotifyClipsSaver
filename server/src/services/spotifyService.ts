@@ -9,6 +9,7 @@ import {
   setDoc,
   getDoc,
   deleteDoc,
+  arrayUnion,
 } from "firebase/firestore";
 const SPOTIFY_CLIENT_ID = String(process.env.CLIENT_ID);
 const SPOTIFY_CLIENT_SECRET = String(process.env.CLIENT_SECRET);
@@ -177,7 +178,7 @@ interface UserData {
 }
 
 // Mock database function
-export const getUserClipData = async (userId: strin, uri: string) => {
+export const getUserClipData = async (userId: string, uri: string) => {
   try {
     const docRef = doc(db, userId, uri);
     const docSnap = await getDoc(docRef);
@@ -198,13 +199,10 @@ export const createUserClip = async (
   userData: object
 ) => {
   try {
-    const check = await getUserClipData(userID);
-    if (check === null) {
-      await addDoc(collection(db, userID), userData);
-      await setDoc(doc(db, userID, uri), userData);
-    } else {
-      await setDoc(doc(db, userID, uri), userData);
-    }
+    const songDoc = doc(db, userID, uri);
+    await updateDoc(songDoc, {
+      times: arrayUnion(userData),
+    });
   } catch (error) {
     console.error("Error adding document:", error);
   }

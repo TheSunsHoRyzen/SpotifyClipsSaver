@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Song } from "../types/song";
 import { checkToken } from "../checkToken";
 import { usePlayer } from "../context/PlayerContext";
@@ -36,6 +36,10 @@ function Track({ song, deviceID, player }: TrackProps) {
   // }, [duration, segmentEnd]);
 
   const { setCurrentSong } = usePlayer();
+  const [showPopup, setShowPopup] = useState(false);
+  const [startTime, setStartTime] = useState(0);
+  const [endTime, setEndTime] = useState(0);
+  const [isPlayingClip, setIsPlayingClip] = useState(false);
 
   const handlePlay = useCallback(async () => {
     if (!deviceID) {
@@ -208,11 +212,62 @@ function Track({ song, deviceID, player }: TrackProps) {
   //     console.log("Toggled playback!");
   //   });
   // }, [player]);
-  const handleAuth = useCallback(async () => {
-    if (!deviceID) {
-      console.error("No device ID available");
-      return;
+
+  const handleAuth = () => {
+    setShowPopup(true);
+  };
+
+  const handleClosePopup = () => {
+    setShowPopup(false);
+  };
+
+  const handleSaveClip = async () => {
+    if (localStorage.getItem("access_token")) {
+      const fetchToken = async () => {
+        const accesstoken = await checkToken();
+        if (accesstoken) {
+          console.log("access token received");
+        }
+      };
+      fetchToken();
+      setStartTime(startTime);
+      setEndTime(endTime);
+      //display this?
+
+      // try {
+      //   const response = await fetch("http://localhost:8080/auth/user-data", {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //     },
+      //     body: JSON.stringify({
+      //       auth_token: localStorage.getItem("access_token"),
+      //       userID: localStorage.getItem("user_id"),
+      //       data: { startTime: startTime, endTime: endTime },
+      //     }),
+      //   });
+
+      //   const data = await response.json();
+
+      //   if (!response.ok) {
+      //     // If response is not 200, show the error message from the backend
+      //     alert(data.error);
+      //     return;
+      //   }
+
+      //   alert(data.message); // Show the success message from backend
+      // } catch (error) {
+      //   console.error("Error:", error);
+      //   alert("Failed to verify user");
+      // }
     }
+    console.log(`Clip saved: Start - ${startTime}, End - ${endTime}`);
+
+    setShowPopup(false);
+  };
+
+  const playClip = useCallback(async () => {
+    if (!deviceID || !player) return;
 
     const token = localStorage.getItem("access_token");
     if (!token) {
@@ -221,22 +276,11 @@ function Track({ song, deviceID, player }: TrackProps) {
     }
 
     try {
-      const playerState = await fetch("https://api.spotify.com/v1/me/player", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-      });
-
-      if (playerState.status === 204) {
-        console.log("No active device found, transferring playback...");
-      }
-
-      // Transfer playback
       await fetch("https://api.spotify.com/v1/me/player", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           device_ids: [deviceID],
@@ -244,11 +288,9 @@ function Track({ song, deviceID, player }: TrackProps) {
         }),
       });
 
-      // Wait for transfer
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // Start playback
-      const playResponse = await fetch(
+      await fetch(
         `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
         {
           method: "PUT",
@@ -258,40 +300,37 @@ function Track({ song, deviceID, player }: TrackProps) {
           },
           body: JSON.stringify({
             uris: [song.track.uri],
-            position_ms: 23000,
+            position_ms: startTime * 1000,
           }),
         }
       );
 
-      if (!playResponse.ok) {
-        const error = await playResponse.json();
-        console.error("Play response error:", error);
-        throw new Error(`HTTP error! status: ${playResponse.status}`);
-      }
-
       setCurrentSong({
         ...song.track,
         duration: song.track.duration_ms,
-        position: 23 / song.track.duration_ms,
+        position: startTime,
         isPlaying: true,
       });
 
-      // Set up a loop to repeat the segment from 23s to 26s
-      const loopInterval = setInterval(async () => {
-        const state = await player.getCurrentState();
-        if (state && state.position >= 26000) {
-          player.seek(23000).then(() => {
-            console.log("Looped back to 23 seconds");
-          });
-        }
-      }, 100); // Check every 100ms
-
-      // Cleanup interval on pause
-      return () => clearInterval(loopInterval);
+      setIsPlayingClip(true); // Trigger loop effect
     } catch (err) {
-      console.error("Error in handlePlay:", err);
+      console.error("Error in playClip:", err);
     }
-  }, [deviceID, song.track, setCurrentSong, player]);
+  }, [deviceID, song.track, setCurrentSong, player, startTime]);
+
+  useEffect(() => {
+    if (!isPlayingClip || !player) return;
+
+    const interval = setInterval(async () => {
+      const state = await player.getCurrentState();
+      if (state && state.position >= endTime * 1000) {
+        await player.seek(startTime * 1000);
+        console.log(`Looped back to ${startTime}s`);
+      }
+    }, 300); // 300ms is usually enough
+
+    return () => clearInterval(interval); // cleanup on unmount or stop
+  }, [isPlayingClip, startTime, endTime, player]);
 
   // const access_token = localStorage.getItem("access_token");
   // const userID = localStorage.getItem("user_id");
@@ -327,6 +366,8 @@ function Track({ song, deviceID, player }: TrackProps) {
   //   alert("Failed to verify user");
   // }
 
+  console.log(song.track.id);
+
   return (
     <div>
       <li key={song.track.id}>
@@ -334,7 +375,8 @@ function Track({ song, deviceID, player }: TrackProps) {
           <h3 className="flex items-center">
             {song.track.name} by{" "}
             {song.track.artists.map((artist, index) => (
-              <span key={index} className="font-bold">
+              <span key={index} className="font-bold ml-1">
+                {" "}
                 {artist.name}
                 {index < song.track.artists.length - 1 ? ", " : " "}
               </span>
@@ -359,8 +401,60 @@ function Track({ song, deviceID, player }: TrackProps) {
           >
             Pause
           </button>
+          {startTime !== 0 && endTime !== 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                Clip: {startTime}s - {endTime}s
+              </span>
+              <button
+                className="text-green-500 hover:text-green-400"
+                onClick={() => playClip()}
+              >
+                Play Clip
+              </button>
+            </div>
+          )}
         </div>
       </li>
+
+      {showPopup && (
+        <div className="flex flex-col items-start p-4">
+          <div className="flex items-center">
+            <button
+              className="text-white size-6 bg-black box-border"
+              onClick={handleClosePopup}
+            >
+              X
+            </button>
+          </div>
+          <div className="flex flex-col space-y-2">
+            <label className="text-base">
+              Start Time:
+              <input
+                type="number"
+                className="ml-2 p-1 border rounded"
+                value={startTime}
+                onChange={(e) => setStartTime(Number(e.target.value))}
+              />
+            </label>
+            <label className="text-base">
+              End Time:
+              <input
+                type="number"
+                className="ml-2 p-1 border rounded"
+                value={endTime}
+                onChange={(e) => setEndTime(Number(e.target.value))}
+              />
+            </label>
+            <button
+              className="mt-2 p-2 bg-blue-500 text-white rounded"
+              onClick={handleSaveClip}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
