@@ -10,31 +10,6 @@ type TrackProps = {
 };
 
 function Track({ song, deviceID, player }: TrackProps) {
-  // const [segmentStart, setSegmentStart] = useState(0);
-  // const [segmentEnd, setSegmentEnd] = useState(0);
-  // const [duration, setDuration] = useState(0);
-  // const [position, setPosition] = useState(0);
-  // const [positionPollingInterval, setPositionPollingInterval] =
-  //   useState<NodeJS.Timer | null>(null);
-  // // const [isPaused, setIsPaused] = useState(true);
-  // setDuration(song.track.duration);
-  // console.log(song);
-  // Set initial segment end when duration changes
-
-  // const formatTime = useCallback((ms) => {
-  //   const totalSeconds = Math.floor(ms / 1000);
-  //   const minutes = Math.floor(totalSeconds / 60);
-  //   const seconds = totalSeconds % 60;
-  //   const paddedSeconds = seconds < 10 ? `0${seconds}` : seconds;
-  //   return `${minutes}:${paddedSeconds}`;
-  // }, []);
-
-  // useEffect(() => {
-  //   if (duration > 0 && segmentEnd === 0) {
-  //     setSegmentEnd(duration);
-  //   }
-  // }, [duration, segmentEnd]);
-
   const { setCurrentSong } = usePlayer();
   const [showPopup, setShowPopup] = useState(false);
   const [startTime, setStartTime] = useState(0);
@@ -113,63 +88,6 @@ function Track({ song, deviceID, player }: TrackProps) {
     // Try to refresh token on error
   }, [deviceID, song.track, setCurrentSong]);
 
-  // useEffect(() => {
-  //   if (player) {
-  //     // Clear any existing interval
-  //     if (positionPollingInterval) {
-  //       clearInterval(positionPollingInterval);
-  //     }
-
-  //     // Create new polling interval
-  //     const interval = setInterval(async () => {
-  //       const state = await player.getCurrentState();
-  //       if (state) {
-  //         setPosition(state.position);
-
-  //         // Check if we need to loop
-  //         if (state.position >= segmentEnd) {
-  //           player.seek(segmentStart).then(() => {
-  //             console.log("Looped back to segment start");
-  //           });
-  //         }
-  //       }
-  //     }, 100); // Poll every 100ms
-
-  //     setPositionPollingInterval(interval);
-
-  //     // Cleanup
-  //     return () => {
-  //       if (interval) {
-  //         clearInterval(interval);
-  //       }
-  //     };
-  //   }
-  // }, [player, segmentStart, segmentEnd]);
-
-  // const handleSegmentStartChange = useCallback(
-  //   (value: number) => {
-  //     setSegmentStart(value);
-  //     if (value > segmentEnd) {
-  //       setSegmentEnd(value);
-  //     }
-  //     // Seek to new start position when changing segment start
-  //     if (player && !isPaused) {
-  //       player.seek(value);
-  //     }
-  //   },
-  //   [segmentEnd, player, isPaused]
-  // );
-
-  // const handleSegmentEndChange = useCallback(
-  //   (value: number) => {
-  //     setSegmentEnd(value);
-  //     if (value < segmentStart) {
-  //       setSegmentStart(value);
-  //     }
-  //   },
-  //   [segmentStart]
-  // );
-
   const handlePause = useCallback(async () => {
     if (!deviceID) return;
     if (localStorage.getItem("access_token")) {
@@ -205,14 +123,6 @@ function Track({ song, deviceID, player }: TrackProps) {
     }
   }, [deviceID, setCurrentSong, song.track]);
 
-  // const handleTogglePlay = useCallback(() => {
-  //   if (!player) return;
-
-  //   player.togglePlay().then(() => {
-  //     console.log("Toggled playback!");
-  //   });
-  // }, [player]);
-
   const handleAuth = () => {
     setShowPopup(true);
   };
@@ -230,36 +140,9 @@ function Track({ song, deviceID, player }: TrackProps) {
         }
       };
       fetchToken();
+
       setStartTime(startTime);
       setEndTime(endTime);
-      //display this?
-
-      // try {
-      //   const response = await fetch("http://localhost:8080/auth/user-data", {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({
-      //       auth_token: localStorage.getItem("access_token"),
-      //       userID: localStorage.getItem("user_id"),
-      //       data: { startTime: startTime, endTime: endTime },
-      //     }),
-      //   });
-
-      //   const data = await response.json();
-
-      //   if (!response.ok) {
-      //     // If response is not 200, show the error message from the backend
-      //     alert(data.error);
-      //     return;
-      //   }
-
-      //   alert(data.message); // Show the success message from backend
-      // } catch (error) {
-      //   console.error("Error:", error);
-      //   alert("Failed to verify user");
-      // }
     }
     console.log(`Clip saved: Start - ${startTime}, End - ${endTime}`);
 

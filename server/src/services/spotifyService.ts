@@ -168,15 +168,6 @@ export const verifyUser = async (
   return { id: data.id };
 };
 
-interface UserData {
-  playlists: string[];
-  favorites: string[];
-  settings: {
-    theme: string;
-    language: string;
-  };
-}
-
 // Mock database function
 export const getUserClipData = async (userId: string, uri: string) => {
   try {

@@ -65,9 +65,8 @@ const Callback: React.FC = () => {
       {accessToken && (
         <div>
           <h2>
-            Access token created! You may now use any function of the website!
+            Access token created! You may now use any function of the website.
           </h2>
-          <h2>{error}</h2>
         </div>
       )}
     </div>

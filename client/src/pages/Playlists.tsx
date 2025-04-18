@@ -230,22 +230,6 @@ function Playlists() {
     );
   };
 
-  const fetchData = () => {
-    const clips = {
-      "spotify:track:4Pwn87M3DUX1Yk0pIQOmFf": [
-        {
-          start: 12,
-          end: 22,
-        },
-        {
-          start: 34,
-          end: 65,
-        },
-      ],
-    };
-
-    return clips;
-  };
   return (
     <PlayerProvider>
       <div>
