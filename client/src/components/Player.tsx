@@ -22,33 +22,59 @@ function Player() {
 
     try {
       const endpoint = currentSong.isPlaying ? "pause" : "play";
-      const response = await fetch(
-        `https://api.spotify.com/v1/me/player/${endpoint}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-          // Include body for play request to resume the current track
-          ...(endpoint === "play" && {
+
+      if (endpoint === "pause") {
+        // Use the pause endpoint
+        const response = await fetch(
+          `http://localhost:8080/spotify/player/pause`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
+        );
+
+        if (response.ok || response.status === 204) {
+          if (currentSong) {
+            setCurrentSong({
+              ...currentSong,
+              isPlaying: false,
+            });
+          }
+        } else {
+          const errorData = await response.text();
+          console.error("Failed to pause playback:", errorData);
+        }
+      } else {
+        // Use the play endpoint
+        const response = await fetch(
+          `http://localhost:8080/spotify/player/play`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
             body: JSON.stringify({
               uris: [currentSong.uri],
               position_ms: currentSong.position,
             }),
-          }),
-        }
-      );
+          }
+        );
 
-      if (response.ok || response.status === 204) {
-        if (currentSong) {
-          setCurrentSong({
-            ...currentSong,
-            isPlaying: !currentSong.isPlaying,
-          });
+        if (response.ok || response.status === 204) {
+          if (currentSong) {
+            setCurrentSong({
+              ...currentSong,
+              isPlaying: true,
+            });
+          }
+        } else {
+          const errorData = await response.text();
+          console.error("Failed to play playback:", errorData);
         }
-      } else {
-        const errorData = await response.text();
-        console.error("Failed to toggle playback:", errorData);
       }
     } catch (error) {
       console.error("Error toggling playback:", error);
@@ -61,10 +87,8 @@ function Player() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
+        const response = await fetch("http://localhost:8080/spotify/player", {
+          credentials: "include",
         });
 
         if (response.status === 204) {

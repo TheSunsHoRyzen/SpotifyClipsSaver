@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Song } from "../types/song";
-import { checkToken } from "../checkToken";
 import { usePlayer } from "../context/PlayerContext";
 
 type TrackProps = {
@@ -9,12 +8,19 @@ type TrackProps = {
   player: any;
 };
 
+interface Clip {
+  id: string;
+  start: number;
+  end: number;
+}
+
 function Track({ song, deviceID, player }: TrackProps) {
   const { setCurrentSong } = usePlayer();
   const [showPopup, setShowPopup] = useState(false);
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(0);
   const [isPlayingClip, setIsPlayingClip] = useState(false);
+  const [activeClip, setActiveClip] = useState<Clip | null>(null);
 
   const handlePlay = useCallback(async () => {
     if (!deviceID) {
@@ -22,30 +28,23 @@ function Track({ song, deviceID, player }: TrackProps) {
       return;
     }
 
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      console.error("No access token available");
-      return;
-    }
-    // playback transfer logic goes here if need be, with catch going after if !(playerResponse)
     try {
-      const playerState = await fetch("https://api.spotify.com/v1/me/player", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
+      // Get player state from backend
+      const playerState = await fetch("http://localhost:8080/spotify/player", {
+        credentials: "include",
       });
 
       if (playerState.status === 204) {
         console.log("No active device found, transferring playback...");
       }
 
-      // Transfer playback
-      await fetch("https://api.spotify.com/v1/me/player", {
+      // Transfer playback using backend
+      await fetch("http://localhost:8080/spotify/player", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           device_ids: [deviceID],
           play: false,
@@ -55,16 +54,17 @@ function Track({ song, deviceID, player }: TrackProps) {
       // Wait for transfer
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // Start playback
+      // Start playback using backend
       const playResponse = await fetch(
-        `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
+        "http://localhost:8080/spotify/player/play",
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
+          credentials: "include",
           body: JSON.stringify({
+            device_id: deviceID,
             uris: [song.track.uri],
             position_ms: 0,
           }),
@@ -76,6 +76,7 @@ function Track({ song, deviceID, player }: TrackProps) {
         console.error("Play response error:", error);
         throw new Error(`HTTP error! status: ${playResponse.status}`);
       }
+
       setCurrentSong({
         ...song.track,
         duration: song.track.duration_ms,
@@ -85,41 +86,31 @@ function Track({ song, deviceID, player }: TrackProps) {
     } catch (err) {
       console.error("Error in handlePlay:", err);
     }
-    // Try to refresh token on error
   }, [deviceID, song.track, setCurrentSong]);
 
   const handlePause = useCallback(async () => {
     if (!deviceID) return;
-    if (localStorage.getItem("access_token")) {
-      const fetchToken = async () => {
-        const accesstoken = await checkToken();
-        if (accesstoken) {
-          console.log("access token received");
-        }
-      };
-      fetchToken();
 
-      try {
-        await fetch(
-          `https://api.spotify.com/v1/me/player/pause?device_id=${deviceID}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-            },
-            // body: JSON.stringify({ uris: [trackURI], position_ms: segmentStart }),
-          }
-        );
-        setCurrentSong({
-          ...song.track,
-          duration: song.track.duration_ms,
-          position: 0,
-          isPlaying: false,
-        });
-      } catch (err) {
-        console.error("Error playing track", err);
-      }
+    try {
+      await fetch(
+        `http://localhost:8080/spotify/player/pause?device_id=${deviceID}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
+
+      setCurrentSong({
+        ...song.track,
+        duration: song.track.duration_ms,
+        position: 0,
+        isPlaying: false,
+      });
+    } catch (err) {
+      console.error("Error pausing track", err);
     }
   }, [deviceID, setCurrentSong, song.track]);
 
@@ -132,124 +123,113 @@ function Track({ song, deviceID, player }: TrackProps) {
   };
 
   const handleSaveClip = async () => {
-    if (localStorage.getItem("access_token")) {
-      const fetchToken = async () => {
-        const accesstoken = await checkToken();
-        if (accesstoken) {
-          console.log("access token received");
-        }
-      };
-      fetchToken();
-
-      setStartTime(startTime);
-      setEndTime(endTime);
-    }
-    console.log(`Clip saved: Start - ${startTime}, End - ${endTime}`);
-
-    setShowPopup(false);
-  };
-
-  const playClip = useCallback(async () => {
-    if (!deviceID || !player) return;
-
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      console.error("No access token available");
-      return;
-    }
-
     try {
-      await fetch("https://api.spotify.com/v1/me/player", {
-        method: "PUT",
+      console.log(song.track.uri);
+      // Validate clip times
+      if (startTime >= endTime) {
+        alert("Start time must be less than end time");
+        return;
+      }
+
+      if (startTime < 0 || endTime < 0) {
+        alert("Times cannot be negative");
+        return;
+      }
+
+      const response = await fetch("http://localhost:8080/db/createClip", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
-          device_ids: [deviceID],
-          play: false,
+          trackUri: song.track.uri,
+          start: startTime,
+          end: endTime,
         }),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      if (!response.ok) {
+        throw new Error("Failed to save clip");
+      }
 
-      await fetch(
-        `https://api.spotify.com/v1/me/player/play?device_id=${deviceID}`,
-        {
+      // After saving, trigger a refresh of the parent's clips data
+      // This will be handled by the parent component's useEffect
+      setShowPopup(false);
+      setStartTime(0);
+      setEndTime(0);
+
+      // Show success message
+      alert("Clip saved successfully!");
+    } catch (error) {
+      console.error("Error saving clip:", error);
+      alert("Failed to save clip. Please try again.");
+    }
+  };
+
+  const playClip = useCallback(
+    async (clip: Clip) => {
+      if (!deviceID || !player) return;
+
+      try {
+        // Transfer playback using backend
+        await fetch("http://localhost:8080/spotify/player", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
+          credentials: "include",
           body: JSON.stringify({
-            uris: [song.track.uri],
-            position_ms: startTime * 1000,
+            device_ids: [deviceID],
+            play: false,
           }),
-        }
-      );
+        });
 
-      setCurrentSong({
-        ...song.track,
-        duration: song.track.duration_ms,
-        position: startTime,
-        isPlaying: true,
-      });
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-      setIsPlayingClip(true); // Trigger loop effect
-    } catch (err) {
-      console.error("Error in playClip:", err);
-    }
-  }, [deviceID, song.track, setCurrentSong, player, startTime]);
+        // Start playback using backend
+        await fetch("http://localhost:8080/spotify/player/play", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            device_id: deviceID,
+            uris: [song.track.uri],
+            position_ms: clip.start * 1000,
+          }),
+        });
+
+        setCurrentSong({
+          ...song.track,
+          duration: song.track.duration_ms,
+          position: clip.start,
+          isPlaying: true,
+        });
+
+        setActiveClip(clip);
+        setIsPlayingClip(true);
+      } catch (err) {
+        console.error("Error in playClip:", err);
+      }
+    },
+    [deviceID, song.track, setCurrentSong, player]
+  );
 
   useEffect(() => {
-    if (!isPlayingClip || !player) return;
+    if (!isPlayingClip || !player || !activeClip) return;
 
     const interval = setInterval(async () => {
       const state = await player.getCurrentState();
-      if (state && state.position >= endTime * 1000) {
-        await player.seek(startTime * 1000);
-        console.log(`Looped back to ${startTime}s`);
+      if (state && state.position >= activeClip.end * 1000) {
+        await player.seek(activeClip.start * 1000);
+        console.log(`Looped back to ${activeClip.start}s`);
       }
-    }, 300); // 300ms is usually enough
+    }, 300);
 
-    return () => clearInterval(interval); // cleanup on unmount or stop
-  }, [isPlayingClip, startTime, endTime, player]);
-
-  // const access_token = localStorage.getItem("access_token");
-  // const userID = localStorage.getItem("user_id");
-
-  // if (!access_token || !userID) {
-  //   alert("Please login first");
-  //   return;
-  // }
-
-  // try {
-  //   // Send both tokens to our backend
-  //   const response = await fetch(
-  //     `http://localhost:8080/auth/db?auth_token=${access_token}&userID=${userID}&uri=${song.track.uri}`,
-  //     {
-  //       method: "GET",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //     }
-  //   );
-
-  //   const data = await response.json();
-
-  //   if (!response.ok) {
-  //     // If response is not 200, show the error message from the backend
-  //     alert(data.error);
-  //     return;
-  //   }
-
-  //   alert(data.message); // Show the success message from backend
-  // } catch (error) {
-  //   console.error("Error:", error);
-  //   alert("Failed to verify user");
-  // }
-
-  console.log(song.track.id);
+    return () => clearInterval(interval);
+  }, [isPlayingClip, activeClip, player]);
 
   return (
     <div>
@@ -284,19 +264,34 @@ function Track({ song, deviceID, player }: TrackProps) {
           >
             Pause
           </button>
-          {startTime !== 0 && endTime !== 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
-                Clip: {startTime}s - {endTime}s
-              </span>
-              <button
-                className="text-green-500 hover:text-green-400"
-                onClick={() => playClip()}
-              >
-                Play Clip
-              </button>
-            </div>
-          )}
+          <div className="flex flex-col gap-2 mt-2">
+            {song.clips.startTimes &&
+            song.clips.endTimes &&
+            song.clips.startTimes.length > 0 &&
+            song.clips.startTimes.length === song.clips.endTimes.length ? (
+              song.clips.startTimes.map((start, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">
+                    Clip: {start}s - {song.clips.endTimes[index]}s
+                  </span>
+                  <button
+                    className="text-green-500 hover:text-green-400"
+                    onClick={() =>
+                      playClip({
+                        id: index.toString(),
+                        start,
+                        end: song.clips.endTimes[index],
+                      })
+                    }
+                  >
+                    Play Clip
+                  </button>
+                </div>
+              ))
+            ) : (
+              <span className="text-sm text-gray-500">No clips available</span>
+            )}
+          </div>
         </div>
       </li>
 

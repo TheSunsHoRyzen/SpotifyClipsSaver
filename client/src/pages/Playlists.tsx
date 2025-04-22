@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { checkToken } from "../checkToken";
+
 import Track from "../components/Track";
 import { Song } from "../types/song";
 import Player from "../components/Player";
@@ -28,6 +28,12 @@ interface Clips {
   };
 }
 
+interface Playlist {
+  id: string;
+  name: string;
+  // Add other playlist properties as needed
+}
+
 // [
 //   c1 <--- you know that the person is clicking on the first index of the array
 //   c2
@@ -44,7 +50,7 @@ interface Clips {
 
 function Playlists() {
   const [loading, setLoading] = useState(false);
-  const [playlists, setPlaylists] = useState<Object[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [songs, setSongs] = useState<Object[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
@@ -56,35 +62,39 @@ function Playlists() {
   // const [currentTrack, setCurrentTrack] = useState("");
 
   const limit = 20;
-  useEffect(() => {
-    if (localStorage.getItem("access_token")) {
-      const fetchToken = async () => {
-        const accesstoken = await checkToken();
-        if (accesstoken) {
-          console.log("access token received");
-        }
-      };
-      fetchToken();
-      fetch("https://api.spotify.com/v1/me/playlists/", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(
-              `Could not get available playlists ${response.statusText}`
-            );
-          }
-          return response.json();
-        })
-        .then((allPlaylists) => {
-          setPlaylists(allPlaylists.items);
-        })
-        .catch((err) => {
-          console.log(err.message);
-        });
+
+  const findPlaylistByName = (name: string) => {
+    return playlists.find((playlist: Playlist) => playlist.name === name);
+  };
+
+  const handlePlaylistSelect = (playlistName: string) => {
+    const playlist = findPlaylistByName(playlistName);
+    if (playlist) {
+      setSelectedPlaylist(playlist.id);
+      setOffset(0);
+      setSongs([]);
     }
+  };
+
+  useEffect(() => {
+    fetch("http://localhost:8080/spotify/v1/me/playlists/", {
+      credentials: "include",
+      method: "GET",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(
+            `Could not get available playlists ${response.statusText}`
+          );
+        }
+        return response.json();
+      })
+      .then((allPlaylists) => {
+        setPlaylists(allPlaylists.items);
+      })
+      .catch((err) => {
+        console.log(err.message);
+      });
   }, []);
 
   useEffect(() => {
@@ -94,19 +104,26 @@ function Playlists() {
     document.body.appendChild(script);
 
     window.onSpotifyWebPlaybackSDKReady = () => {
-      if (localStorage.getItem("access_token")) {
-        const fetchToken = async () => {
-          const accesstoken = await checkToken();
-          if (accesstoken) {
-            console.log("YAY!");
-          }
-        };
-        fetchToken();
-      }
       const spotifyPlayer = new window.Spotify.Player({
         name: "Spotify Clip Saver",
         getOAuthToken: (cb: (token: string | null) => void) => {
-          cb(localStorage.getItem("access_token"));
+          // Fetch token from backend
+          fetch("http://localhost:8080/spotify/player-token", {
+            credentials: "include",
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Failed to get player token");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              cb(data.access_token);
+            })
+            .catch((error) => {
+              console.error("Error getting player token:", error);
+              cb(null);
+            });
         },
         volume: 1,
       });
@@ -158,64 +175,72 @@ function Playlists() {
     if (!selectedPlaylist) {
       return;
     }
-    if (localStorage.getItem("access_token")) {
-      const fetchToken = async () => {
-        const accesstoken = await checkToken();
-        if (accesstoken) {
-          console.log("access token received");
-        }
-      };
-      fetchToken();
-      setLoading(true);
 
-      // Fetch all clips
-      const fetchAllClips = async () => {
-        try {
-          const response = await fetch("http://localhost:8080/clips");
-          if (!response.ok) {
-            throw new Error("Failed to fetch clips");
-          }
-          return await response.json();
-        } catch (error) {
-          console.error("Error fetching clips:", error);
-          return {};
-        }
-      };
+    setLoading(true);
 
-      // Fetch songs and merge with clips
-      Promise.all([
-        fetch(
-          `https://api.spotify.com/v1/playlists/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+    // Fetch songs and merge with clips
+    Promise.all([
+      fetch(
+        `http://localhost:8080/spotify/playlist/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
+        {
+          credentials: "include",
+        }
+      ).then((response) => {
+        if (!response.ok) {
+          throw new Error(
+            `Could not get available playlists ${response.statusText}`
+          );
+        }
+        return response.json();
+      }),
+      fetch("http://localhost:8080/db/getClips", {
+        credentials: "include",
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch clips");
+        }
+
+        return response.json();
+      }),
+    ])
+      .then(([allSongs, allClips]) => {
+        setTotal(allSongs.total);
+        const songsWithClips = allSongs.items.map((song: Song) => {
+          const songUri = song.track.uri;
+          // Get clips for this song from the clips object
+          const songClips = allClips[songUri] || {
+            startTimes: [],
+            endTimes: [],
+          };
+
+          // Ensure startTimes and endTimes are arrays
+          const startTimes = Array.isArray(songClips.startTimes)
+            ? songClips.startTimes
+            : [];
+          const endTimes = Array.isArray(songClips.endTimes)
+            ? songClips.endTimes
+            : [];
+
+          // Make sure arrays have the same length
+          const minLength = Math.min(startTimes.length, endTimes.length);
+          const normalizedStartTimes = startTimes.slice(0, minLength);
+          const normalizedEndTimes = endTimes.slice(0, minLength);
+
+          return {
+            ...song,
+            clips: {
+              startTimes: normalizedStartTimes,
+              endTimes: normalizedEndTimes,
             },
-          }
-        ).then((response) => {
-          if (!response.ok) {
-            throw new Error(
-              `Could not get available playlists ${response.statusText}`
-            );
-          }
-          return response.json();
-        }),
-        fetchAllClips(),
-      ])
-        .then(([allSongs, allClips]) => {
-          setTotal(allSongs.total);
-          const songsWithClips = allSongs.items.map((song: Song) => {
-            const songUri = song.track.uri;
-            const clips = allClips[songUri] || { startTimes: [], endTimes: [] };
-            return { ...song, clips };
-          });
-          setSongs(songsWithClips);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.log(err.message);
-          setLoading(false);
+          };
         });
-    }
+        setSongs(songsWithClips);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.log(err.message);
+        setLoading(false);
+      });
   }, [selectedPlaylist, offset]);
 
   const loadNextPage = () => {
@@ -243,15 +268,11 @@ function Playlists() {
           </label>
           <select
             className="border-2 rounded-md border-green-500/100 p-2"
-            onChange={(e) => {
-              setSelectedPlaylist(e.target.value);
-              setOffset(0);
-              setSongs([]);
-            }}
+            onChange={(e) => handlePlaylistSelect(e.target.value)}
           >
             <option value="">--Please choose an option--</option>
-            {playlists.map((singlePlaylist: any) => (
-              <option key={singlePlaylist.id} value={singlePlaylist.id}>
+            {playlists.map((singlePlaylist: Playlist) => (
+              <option key={singlePlaylist.id} value={singlePlaylist.name}>
                 {singlePlaylist.name}
               </option>
             ))}

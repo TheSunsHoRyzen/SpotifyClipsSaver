@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { checkToken } from "../checkToken";
 
 interface UserProfile {
   display_name: string;
@@ -12,34 +11,24 @@ function Dashboard() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    if (localStorage.getItem("access_token")) {
-      // Fetch the user's profile from Spotify
-      const fetchToken = async () => {
-        const accesstoken = await checkToken();
-        if (accesstoken) {
-          console.log("access token received!");
+    // Fetch the user's profile from Spotify
+    fetch("http://localhost:8080/spotify/me", {
+      credentials: "include",
+      method: "GET",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(
+            `Error fetching user profile: ${response.statusText}`
+          );
         }
-      };
-      fetchToken();
-      fetch("https://api.spotify.com/v1/me", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
+        return response.json();
       })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(
-              `Error fetching user profile: ${response.statusText}`
-            );
-          }
-          return response.json();
-        })
-        .then((profile) => {
-          setUserProfile(profile);
-          localStorage.setItem("user_id", profile.id); // Store user ID in localStorage
-        })
-        .catch((err) => setError(err.message));
-    }
+      .then((profile) => {
+        setUserProfile(profile);
+        localStorage.setItem("user_id", profile.id); // Store user ID in localStorage
+      })
+      .catch((err) => setError(err.message));
   }, []);
 
   return (
