@@ -164,10 +164,10 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
       setStartTime(0);
       setEndTime(0);
 
-      // Show success message
-      alert("Clip saved successfully!");
       //re-render clips using parent function
       onClipEvent();
+      // Show success message
+      alert("Clip saved successfully!");
     } catch (error) {
       console.error("Error saving clip:", error);
       alert("Failed to save clip. Please try again.");
@@ -195,12 +195,10 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
         throw new Error("Failed to delete clip");
       }
 
-      // After saving, trigger a refresh of the parent's clips data
-      // This will be handled by the parent component's useEffect
+      //re-render clips using function in parent
+      onClipEvent();
       // Show success message
       alert("Clip deleted successfully!");
-      //re-render clips using parent function
-      onClipEvent();
     } catch (error) {
       console.error("Error deleting clip:", error);
       alert("Failed to delete clip. Please try again.");
