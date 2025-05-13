@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import Track from "../components/Track";
 import { Song } from "../types/song";
@@ -16,17 +16,6 @@ declare global {
     onSpotifyWebPlaybackSDKReady: () => void;
   }
 }
-interface Clip {
-  id: string;
-  start: number;
-  end: number;
-}
-
-interface Clips {
-  [uri: string]: {
-    [id: string]: Clip;
-  };
-}
 
 interface Playlist {
   id: string;
@@ -34,70 +23,18 @@ interface Playlist {
   // Add other playlist properties as needed
 }
 
-// [
-//   c1 <--- you know that the person is clicking on the first index of the array
-//   c2
-//   c3
-// ]
-
-// new array -> override the whole thing
-
-// [
-//   c1'
-//   c2
-//   c3
-// ]
-
 function Playlists() {
   const [loading, setLoading] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [total, setTotal] = useState<number>(0);
-  const [songs, setSongs] = useState<Object[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]); // previously Object[]
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const [offset, setOffset] = useState<number>(0);
   const [player, setPlayer] = useState<any>(null);
-  // const [token, setToken] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(true);
-  // const [currentTrack, setCurrentTrack] = useState("");
-
-  const limit = 20;
-
-  const findPlaylistByName = (name: string) => {
-    return playlists.find((playlist: Playlist) => playlist.name === name);
-  };
-
-  const handlePlaylistSelect = (playlistName: string) => {
-    const playlist = findPlaylistByName(playlistName);
-    if (playlist) {
-      setSelectedPlaylist(playlist.id);
-      setOffset(0);
-      setSongs([]);
-    }
-  };
 
   useEffect(() => {
-    fetch("http://localhost:8080/spotify/v1/me/playlists/", {
-      credentials: "include",
-      method: "GET",
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Could not get available playlists ${response.statusText}`
-          );
-        }
-        return response.json();
-      })
-      .then((allPlaylists) => {
-        setPlaylists(allPlaylists.items);
-      })
-      .catch((err) => {
-        console.log(err.message);
-      });
-  }, []);
-
-  useEffect(() => {
+    // code from spotify to create player
     const script = document.createElement("script");
     script.src = "https://sdk.scdn.co/spotify-player.js";
     script.async = true;
@@ -155,10 +92,6 @@ function Playlists() {
           };
         }) => {
           if (!state) return;
-          setIsPaused(state.paused);
-          // if (state.track_window.current_track) {
-          //   setCurrentTrack(state.track_window.current_track.name);
-          // }
         }
       );
 
@@ -171,7 +104,8 @@ function Playlists() {
     };
   }, []);
 
-  useEffect(() => {
+  // fetch all of the clips from the database and save them to local Song type.
+  const fetchClips = useCallback(() => {
     if (!selectedPlaylist) {
       return;
     }
@@ -188,7 +122,7 @@ function Playlists() {
       ).then((response) => {
         if (!response.ok) {
           throw new Error(
-            `Could not get available playlists ${response.statusText}`
+            `Could not get available playlists songs ${response.statusText}`
           );
         }
         return response.json();
@@ -211,6 +145,7 @@ function Playlists() {
           const songClips = allClips[songUri] || {
             startTimes: [],
             endTimes: [],
+            ids: [],
           };
 
           // Ensure startTimes and endTimes are arrays
@@ -220,6 +155,7 @@ function Playlists() {
           const endTimes = Array.isArray(songClips.endTimes)
             ? songClips.endTimes
             : [];
+          const ids = Array.isArray(songClips.ids) ? songClips.ids : [];
 
           // Make sure arrays have the same length
           const minLength = Math.min(startTimes.length, endTimes.length);
@@ -231,6 +167,7 @@ function Playlists() {
             clips: {
               startTimes: normalizedStartTimes,
               endTimes: normalizedEndTimes,
+              ids: ids,
             },
           };
         });
@@ -242,13 +179,53 @@ function Playlists() {
         setLoading(false);
       });
   }, [selectedPlaylist, offset]);
+  useEffect(() => {
+    fetchClips();
+  }, [selectedPlaylist, offset, fetchClips]);
 
+  // Fetch user's public playlists
+  useEffect(() => {
+    fetch("http://localhost:8080/spotify/v1/me/playlists/", {
+      credentials: "include",
+      method: "GET",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(
+            `Could not get available playlists ${response.statusText}`
+          );
+        }
+        return response.json();
+      })
+      .then((allPlaylists) => {
+        setPlaylists(allPlaylists.items);
+      })
+      .catch((err) => {
+        console.log(err.message);
+      });
+  }, []);
+
+  const limit = 20;
+
+  const findPlaylistByName = (name: string) => {
+    return playlists.find((playlist: Playlist) => playlist.name === name);
+  };
+  // once user selects playlist, find that playlist in the playlists of Playlist objects
+  const handlePlaylistSelect = (playlistName: string) => {
+    const playlist = findPlaylistByName(playlistName);
+    if (playlist) {
+      setSelectedPlaylist(playlist.id);
+      setOffset(0);
+      setSongs([]);
+    }
+  };
+  // load next page
   const loadNextPage = () => {
     setOffset((prevOffset) =>
       prevOffset + limit <= total ? prevOffset + limit : prevOffset
     );
   };
-
+  // load previous page
   const loadPrevPage = () => {
     setOffset((prevOffset) =>
       prevOffset - limit > 0 ? prevOffset - limit : 0
@@ -303,19 +280,18 @@ function Playlists() {
           <div>
             <ul>
               {(songs as Song[]).map((song: Song) => (
-                <Track song={song} deviceID={deviceId} player={player} />
+                <Track
+                  song={song}
+                  deviceID={deviceId}
+                  player={player}
+                  onClipEvent={fetchClips}
+                />
               ))}
             </ul>
           </div>
         )}
-
-        {/* {playlists ? (
-          <pre>{JSON.stringify(playlists, null, 2)}</pre> // Display playlists as formatted JSON
-        ) : (
-          <p>Loading playlists...</p>
-        )} */}
         {loading && <p>Loading...</p>}
-        <Player />
+        <Player deviceID={deviceId} />
       </div>
     </PlayerProvider>
   );

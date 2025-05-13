@@ -7,7 +7,11 @@ import {
 } from "@heroicons/react/24/solid";
 import { usePlayer } from "../context/PlayerContext";
 
-function Player() {
+interface PlayerProps {
+  deviceID: string | null;
+}
+
+function Player({ deviceID }: PlayerProps) {
   const { currentSong, setCurrentSong } = usePlayer();
   const [isRepeat, setIsRepeat] = useState(false);
 
@@ -26,7 +30,7 @@ function Player() {
       if (endpoint === "pause") {
         // Use the pause endpoint
         const response = await fetch(
-          `http://localhost:8080/spotify/player/pause`,
+          `http://localhost:8080/spotify/player/pause?device_id=${deviceID}`,
           {
             method: "PUT",
             headers: {
@@ -50,17 +54,13 @@ function Player() {
       } else {
         // Use the play endpoint
         const response = await fetch(
-          `http://localhost:8080/spotify/player/play`,
+          `http://localhost:8080/spotify/player/play?device_id=${deviceID}`,
           {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
             },
             credentials: "include",
-            body: JSON.stringify({
-              uris: [currentSong.uri],
-              position_ms: currentSong.position,
-            }),
           }
         );
 
@@ -84,11 +84,13 @@ function Player() {
   // Update polling to handle errors gracefully
   useEffect(() => {
     if (!currentSong) return;
-
+    let errorCount = 0;
+    const maxErrors = 3;
     const interval = setInterval(async () => {
       try {
         const response = await fetch("http://localhost:8080/spotify/player", {
           credentials: "include",
+          method: "GET",
         });
 
         if (response.status === 204) {
@@ -115,10 +117,20 @@ function Player() {
                 position: state.progress_ms,
               });
             }
+            errorCount = 0;
           }
+        } else {
+          errorCount++;
+          console.warn(`Polling failed (${errorCount}/${maxErrors})`);
         }
       } catch (error) {
-        console.error("Error polling player state:", error);
+        errorCount++;
+        console.error(`Polling error (${errorCount}/${maxErrors}):`, error);
+      }
+
+      if (errorCount >= maxErrors) {
+        console.warn("Max polling errors reached. Stopping polling.");
+        clearInterval(interval);
       }
     }, 1000);
 

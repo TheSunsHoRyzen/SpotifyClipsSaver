@@ -20,7 +20,8 @@
     "express-session": "^1.18.1",
     "firebase": "^11.4.0",
     "node-fetch": "^3.3.2",
-    "qs": "^6.13.1"
+    "qs": "^6.13.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.8",

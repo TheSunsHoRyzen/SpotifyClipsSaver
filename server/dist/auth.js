@@ -13,7 +13,7 @@ const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
 // console.log(clientSecret);
 // 1. Redirect to Spotify login
 router.get("/login", (req, res) => {
-    const scope = "user-read-private user-read-email playlist-modify-public user-modify-playback-state user-read-currently-playing streaming";
+    const scope = "user-read-private user-read-email playlist-modify-public user-modify-playback-state user-read-playback-state user-read-currently-playing streaming";
     const queryParams = querystring.stringify({
         response_type: "code",
         client_id: clientId,

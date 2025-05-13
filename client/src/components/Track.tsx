@@ -6,6 +6,7 @@ type TrackProps = {
   song: Song;
   deviceID: string | null;
   player: any;
+  onClipEvent: () => void;
 };
 
 interface Clip {
@@ -14,14 +15,15 @@ interface Clip {
   end: number;
 }
 
-function Track({ song, deviceID, player }: TrackProps) {
-  const { setCurrentSong } = usePlayer();
+function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
+  const { setCurrentSong, currentSong } = usePlayer();
   const [showPopup, setShowPopup] = useState(false);
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(0);
   const [isPlayingClip, setIsPlayingClip] = useState(false);
   const [activeClip, setActiveClip] = useState<Clip | null>(null);
 
+  //handle user clicking play button (NOT clip!)
   const handlePlay = useCallback(async () => {
     if (!deviceID) {
       console.error("No device ID available");
@@ -82,37 +84,40 @@ function Track({ song, deviceID, player }: TrackProps) {
         duration: song.track.duration_ms,
         position: 0,
         isPlaying: true,
+        isClip: false,
       });
     } catch (err) {
       console.error("Error in handlePlay:", err);
     }
   }, [deviceID, song.track, setCurrentSong]);
 
-  const handlePause = useCallback(async () => {
-    if (!deviceID) return;
+  //handle user clicking pause button (NOT clip!)
+  // const handlePause = useCallback(async () => {
+  //   if (!deviceID) return;
 
-    try {
-      await fetch(
-        `http://localhost:8080/spotify/player/pause?device_id=${deviceID}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
+  //   try {
+  //     await fetch(
+  //       `http://localhost:8080/spotify/player/pause?device_id=${deviceID}`,
+  //       {
+  //         method: "PUT",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         credentials: "include",
+  //       }
+  //     );
 
-      setCurrentSong({
-        ...song.track,
-        duration: song.track.duration_ms,
-        position: 0,
-        isPlaying: false,
-      });
-    } catch (err) {
-      console.error("Error pausing track", err);
-    }
-  }, [deviceID, setCurrentSong, song.track]);
+  //     setCurrentSong({
+  //       ...song.track,
+  //       duration: song.track.duration_ms,
+  //       position: 0,
+  //       isPlaying: false,
+  //       isClip: currentSong?.isClip || false,
+  //     });
+  //   } catch (err) {
+  //     console.error("Error pausing track", err);
+  //   }
+  // }, [deviceID, setCurrentSong, currentSong, song.track]);
 
   const handleAuth = () => {
     setShowPopup(true);
@@ -161,9 +166,44 @@ function Track({ song, deviceID, player }: TrackProps) {
 
       // Show success message
       alert("Clip saved successfully!");
+      //re-render clips using parent function
+      onClipEvent();
     } catch (error) {
       console.error("Error saving clip:", error);
       alert("Failed to save clip. Please try again.");
+    }
+  };
+  const handleDeleteClip = async (start: number, end: number, id: string) => {
+    try {
+      // Validate clip times
+
+      const response = await fetch("http://localhost:8080/db/deleteClip", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          trackUri: song.track.uri,
+          start: start,
+          end: end,
+          id: id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete clip");
+      }
+
+      // After saving, trigger a refresh of the parent's clips data
+      // This will be handled by the parent component's useEffect
+      // Show success message
+      alert("Clip deleted successfully!");
+      //re-render clips using parent function
+      onClipEvent();
+    } catch (error) {
+      console.error("Error deleting clip:", error);
+      alert("Failed to delete clip. Please try again.");
     }
   };
 
@@ -206,6 +246,7 @@ function Track({ song, deviceID, player }: TrackProps) {
           duration: song.track.duration_ms,
           position: clip.start,
           isPlaying: true,
+          isClip: true,
         });
 
         setActiveClip(clip);
@@ -218,7 +259,8 @@ function Track({ song, deviceID, player }: TrackProps) {
   );
 
   useEffect(() => {
-    if (!isPlayingClip || !player || !activeClip) return;
+    if (!isPlayingClip || !player || !activeClip || !currentSong?.isClip)
+      return;
 
     const interval = setInterval(async () => {
       const state = await player.getCurrentState();
@@ -229,7 +271,7 @@ function Track({ song, deviceID, player }: TrackProps) {
     }, 300);
 
     return () => clearInterval(interval);
-  }, [isPlayingClip, activeClip, player]);
+  }, [isPlayingClip, activeClip, player, currentSong?.isClip]);
 
   return (
     <div>
@@ -258,16 +300,15 @@ function Track({ song, deviceID, player }: TrackProps) {
           >
             Play
           </button>
-          <button
+          {/* <button
             className="text-green-500 hover:text-green-400 "
             onClick={handlePause}
           >
             Pause
-          </button>
+          </button> */}
           <div className="flex flex-col gap-2 mt-2">
             {song.clips.startTimes &&
             song.clips.endTimes &&
-            song.clips.startTimes.length > 0 &&
             song.clips.startTimes.length === song.clips.endTimes.length ? (
               song.clips.startTimes.map((start, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -278,13 +319,25 @@ function Track({ song, deviceID, player }: TrackProps) {
                     className="text-green-500 hover:text-green-400"
                     onClick={() =>
                       playClip({
-                        id: index.toString(),
+                        id: index.toString(), // don't need?
                         start,
                         end: song.clips.endTimes[index],
                       })
                     }
                   >
                     Play Clip
+                  </button>
+                  <button
+                    className="text-green-500 hover:text-green-400"
+                    onClick={() => {
+                      handleDeleteClip(
+                        start,
+                        song.clips.endTimes[index],
+                        song.clips.ids[index]
+                      );
+                    }}
+                  >
+                    Delete Clip
                   </button>
                 </div>
               ))

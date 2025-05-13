@@ -8,6 +8,7 @@ type PlayerContextType = {
     name?: string;
     artists?: { name: string }[];
     uri?: string;
+    isClip: boolean;
   } | null;
   setCurrentSong: (song: PlayerContextType["currentSong"]) => void;
 };

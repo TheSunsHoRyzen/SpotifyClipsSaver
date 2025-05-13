@@ -10,5 +10,6 @@ export type Song = {
   clips: {
     startTimes: number[];
     endTimes: number[];
+    ids: string[];
   };
 };
