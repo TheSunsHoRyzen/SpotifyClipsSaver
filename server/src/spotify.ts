@@ -141,7 +141,6 @@ router.get(
           },
         }
       );
-
       res.json(data);
     } catch (err) {
       console.error("Error fetching playlist tracks:", err);

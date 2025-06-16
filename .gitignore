@@ -9,7 +9,8 @@
 /coverage
 
 # production
-/build
+/client/build
+/server/src/spotifyclipsaver-firebase-adminsdk-fbsvc-2c6421f411.json
 
 #server
 /server/node_modules

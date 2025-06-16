@@ -52,15 +52,21 @@ function Player({ deviceID }: PlayerProps) {
           console.error("Failed to pause playback:", errorData);
         }
       } else {
+        console.log(currentSong.position);
         // Use the play endpoint
         const response = await fetch(
-          `http://localhost:8080/spotify/player/play?device_id=${deviceID}`,
+          `http://localhost:8080/spotify/player/play`,
           {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
             },
             credentials: "include",
+            body: JSON.stringify({
+              device_id: deviceID,
+              uris: [currentSong.uri],
+              position_ms: currentSong.position,
+            }),
           }
         );
 
@@ -69,6 +75,7 @@ function Player({ deviceID }: PlayerProps) {
             setCurrentSong({
               ...currentSong,
               isPlaying: true,
+              position: currentSong.position,
             });
           }
         } else {
@@ -98,7 +105,7 @@ function Player({ deviceID }: PlayerProps) {
           return;
         }
         if (response.ok) {
-          console.log("Refresh");
+          // console.log("Refresh");
           const state = await response.json();
           if (currentSong) {
             const newIsPlaying = state.is_playing;
@@ -157,7 +164,7 @@ function Player({ deviceID }: PlayerProps) {
   const progress = (currentSong.position / currentSong.duration) * 100;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-[15.5vh] bg-white shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 h-[14.5vh] bg-white shadow-lg">
       <div className="w-full px-4 py-2">
         {currentSong.name && (
           <div className="text-center mb-2">

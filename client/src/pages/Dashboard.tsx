@@ -33,8 +33,8 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!error && !userProfile && (
-        <p>Loading... Please Login with Spotify before using this App!</p>
+      {error && !userProfile && (
+        <p>Loading... Please Login with Spotify before using this Website!</p>
       )}
       {userProfile && (
         <div className="flex flex-col justify-center items-center space-y-7">

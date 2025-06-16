@@ -15,11 +15,20 @@ const LoginButton: React.FC = () => {
       {/* Centered Button */}
       <div className="flex flex-col justify-center items-center">
         <button
-          className="bg-green-500 p-2 rounded text-white"
+          className="bg-green-500 p-2 rounded text-white mb-3"
           onClick={handleLogin}
         >
           Login with Spotify
         </button>
+        <p className="text-gray-400 mb-2">
+          Welcome to Spotify Clip Saver! You must have a Spotify Premium Account
+          and you must Login with Spotify before using this website.
+        </p>
+        <p className="text-gray-400">
+          After you sign in, you will be brought back to this page but will be
+          able to use any part of the website.
+        </p>
+        <p className="text-gray-400"> UI Overhaul coming soon!</p>
       </div>
     </div>
   );

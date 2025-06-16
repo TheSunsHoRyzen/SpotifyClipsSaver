@@ -265,11 +265,25 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
       if (state && state.position >= activeClip.end * 1000) {
         await player.seek(activeClip.start * 1000);
         console.log(`Looped back to ${activeClip.start}s`);
+        // setCurrentSong({
+        //   ...song.track,
+        //   duration: song.track.duration_ms,
+        //   position: activeClip.start,
+        //   isPlaying: true,
+        //   isClip: true,
+        // });
       }
-    }, 300);
+    }, 900);
 
     return () => clearInterval(interval);
-  }, [isPlayingClip, activeClip, player, currentSong?.isClip]);
+  }, [
+    isPlayingClip,
+    activeClip,
+    player,
+    currentSong?.isClip,
+    setCurrentSong,
+    song.track,
+  ]);
 
   return (
     <div>

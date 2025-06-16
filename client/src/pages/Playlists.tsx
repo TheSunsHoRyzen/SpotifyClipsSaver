@@ -29,10 +29,11 @@ function Playlists() {
   const [total, setTotal] = useState<number>(0);
   const [songs, setSongs] = useState<Song[]>([]); // previously Object[]
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
-  const [offset, setOffset] = useState<number>(0);
+  const [offset, setOffset] = useState<number>(-1);
   const [player, setPlayer] = useState<any>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-
+  const [error, setError] = useState<string | null>(null);
+  const limit = 20;
   useEffect(() => {
     // code from spotify to create player
     const script = document.createElement("script");
@@ -138,8 +139,18 @@ function Playlists() {
       }),
     ])
       .then(([allSongs, allClips]) => {
+        // maybe try it here
+
         setTotal(allSongs.total);
+
+        // allClips:
+        // { uri1: { startTimes: [], endTimes: [], ids: [] }, uri2: { ... } }
+        // new solution, worse run time
+        // loop through all clips, and find the corresponding song in allSongs
+        // if it doesn't exist, call deleteTrack and delete the entire uri for that song
+        // if it does exist, add the clips to that song
         const songsWithClips = allSongs.items.map((song: Song) => {
+          // suggestion
           const songUri = song.track.uri;
           // Get clips for this song from the clips object
           const songClips = allClips[songUri] || {
@@ -175,7 +186,7 @@ function Playlists() {
         setLoading(false);
       })
       .catch((err) => {
-        console.log(err.message);
+        console.error(err.message);
         setLoading(false);
       });
   }, [selectedPlaylist, offset]);
@@ -201,11 +212,10 @@ function Playlists() {
         setPlaylists(allPlaylists.items);
       })
       .catch((err) => {
+        setError(err.message);
         console.log(err.message);
       });
   }, []);
-
-  const limit = 20;
 
   const findPlaylistByName = (name: string) => {
     return playlists.find((playlist: Playlist) => playlist.name === name);
@@ -232,12 +242,89 @@ function Playlists() {
     );
   };
 
+  const deleteOldClips = async () => {
+    if (!selectedPlaylist) {
+      return;
+    }
+    let doesClipExist = new Map();
+    setLoading(true);
+
+    const response = await fetch("http://localhost:8080/db/getClips", {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch clips");
+    }
+
+    const everyClip = await response.json();
+    // allClips = everyClip;
+    for (let clip in everyClip) {
+      // console.log(clip + " CLIPS");
+      doesClipExist.set(clip, false);
+    }
+
+    const repeatingStep = async (tempOffset: number): Promise<Song[]> => {
+      const response = await fetch(
+        `http://localhost:8080/spotify/playlist/${selectedPlaylist}/tracks?offset=${tempOffset}&limit=${limit}`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Could not get available playlist songs: ${response.statusText}`
+        );
+      }
+
+      const newSongs = await response.json();
+      return newSongs.items as Song[];
+    };
+
+    for (let i = 0; i < total; i += limit) {
+      let songs: Song[] = await repeatingStep(i);
+      // console.log(songs);
+      for (const song of Object.values(songs)) {
+        // console.log(song);
+        if (!doesClipExist.get(song.track.uri)) {
+          doesClipExist.set(song.track.uri, true); //set to true if clip exists
+        }
+      }
+    }
+    for (const [key, value] of doesClipExist) {
+      if (!value) {
+        try {
+          const response = await fetch(
+            `http://localhost:8080/db/deleteOldClip?trackUri=${key}`,
+            {
+              credentials: "include",
+              method: "POST",
+            }
+          );
+          if (!response.ok) {
+            throw new Error(
+              `Could not delete clip from delete song: ${response.statusText}`
+            );
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    }
+
+    setLoading(false);
+  };
+
   return (
     <PlayerProvider>
       <div>
         <h1 className="flex justify-center items-center text-2xl">
           Spotify Playlists
         </h1>
+        <div className="text-center mt-2">
+          {error && <p>Login with Spotify before using this Website!</p>}
+        </div>
         {/* Dropdown for Playlists */}
         <div className="flex flex-col items-start gap-4 p-4">
           <label className="text-lg font-semibold">
@@ -256,28 +343,37 @@ function Playlists() {
           </select>
 
           {/* Pagination */}
-          <div className="flex items-center gap-4 mt-4">
-            {songs && offset > 0 && !loading && (
-              <button
-                className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
-                onClick={loadPrevPage}
-              >
-                ← Prev Page
-              </button>
-            )}
-            {songs && offset + limit < total && !loading && (
-              <button
-                className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
-                onClick={loadNextPage}
-              >
-                Next Page →
-              </button>
-            )}
+          <div className="flex items-center gap-4 mt-4 w-full">
+            <div className="flex items-center gap-4">
+              {songs && offset > 0 && !loading && (
+                <button
+                  className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
+                  onClick={loadPrevPage}
+                >
+                  ← Prev Page
+                </button>
+              )}
+
+              {songs && offset + limit < total && !loading && (
+                <button
+                  className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
+                  onClick={loadNextPage}
+                >
+                  Next Page →
+                </button>
+              )}
+            </div>
+            <div className="mr-10">
+              {songs && offset >= 0 && !loading && (
+                <button onClick={deleteOldClips}>Delete Old Clip</button>
+              )}
+            </div>
           </div>
         </div>
+        {loading && <p>Loading...</p>}
 
         {songs && (
-          <div>
+          <div className="pb-[15vh]">
             <ul>
               {(songs as Song[]).map((song: Song) => (
                 <Track
@@ -290,7 +386,6 @@ function Playlists() {
             </ul>
           </div>
         )}
-        {loading && <p>Loading...</p>}
         <Player deviceID={deviceId} />
       </div>
     </PlayerProvider>
