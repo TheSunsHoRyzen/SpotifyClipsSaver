@@ -344,7 +344,7 @@ function Playlists() {
 
           {/* Pagination */}
           <div className="flex items-center gap-4 mt-4 w-full">
-            <div className="flex items-center gap-4">
+            <div className="flex gap-4">
               {songs && offset > 0 && !loading && (
                 <button
                   className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
@@ -365,7 +365,14 @@ function Playlists() {
             </div>
             <div className="mr-10">
               {songs && offset >= 0 && !loading && (
-                <button onClick={deleteOldClips}>Delete Old Clip</button>
+                <>
+                  <button onClick={deleteOldClips}>Delete Old Clip</button>
+                  <span className="ml-4 text-gray-400 font-light">
+                    {" "}
+                    ← Click this button to delete clips from songs you remove
+                    from your playlist.
+                  </span>
+                </>
               )}
             </div>
           </div>

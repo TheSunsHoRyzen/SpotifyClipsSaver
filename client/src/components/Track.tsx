@@ -18,8 +18,8 @@ interface Clip {
 function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
   const { setCurrentSong, currentSong } = usePlayer();
   const [showPopup, setShowPopup] = useState(false);
-  const [startTime, setStartTime] = useState(0);
-  const [endTime, setEndTime] = useState(0);
+  const [startTime, setStartTime] = useState<string>("0:00");
+  const [endTime, setEndTime] = useState<string>("0:00");
   const [isPlayingClip, setIsPlayingClip] = useState(false);
   const [activeClip, setActiveClip] = useState<Clip | null>(null);
 
@@ -129,17 +129,16 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
 
   const handleSaveClip = async () => {
     try {
-      console.log(song.track.uri);
       // Validate clip times
-      if (startTime >= endTime) {
-        alert("Start time must be less than end time");
-        return;
-      }
+      // if (startTime >= endTime) {
+      //   alert("Start time must be less than end time");
+      //   return;
+      // }
 
-      if (startTime < 0 || endTime < 0) {
-        alert("Times cannot be negative");
-        return;
-      }
+      // if (startTime < 0 || endTime < 0) {
+      //   alert("Times cannot be negative");
+      //   return;
+      // }
 
       const response = await fetch("http://localhost:8080/db/createClip", {
         method: "POST",
@@ -161,8 +160,8 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
       // After saving, trigger a refresh of the parent's clips data
       // This will be handled by the parent component's useEffect
       setShowPopup(false);
-      setStartTime(0);
-      setEndTime(0);
+      setStartTime("0:00");
+      setEndTime("0:00");
 
       //re-render clips using parent function
       onClipEvent();
@@ -374,19 +373,21 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
             <label className="text-base">
               Start Time:
               <input
-                type="number"
+                type="text"
+                placeholder="mm:ss"
                 className="ml-2 p-1 border rounded"
                 value={startTime}
-                onChange={(e) => setStartTime(Number(e.target.value))}
+                onChange={(e) => setStartTime(e.target.value)}
               />
             </label>
             <label className="text-base">
               End Time:
               <input
-                type="number"
+                type="text"
+                placeholder="mm:ss"
                 className="ml-2 p-1 border rounded"
                 value={endTime}
-                onChange={(e) => setEndTime(Number(e.target.value))}
+                onChange={(e) => setEndTime(e.target.value)}
               />
             </label>
             <button
