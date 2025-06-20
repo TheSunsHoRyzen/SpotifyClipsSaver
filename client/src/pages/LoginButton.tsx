@@ -22,13 +22,13 @@ const LoginButton: React.FC = () => {
         </button>
         <p className="text-gray-400 mb-2">
           Welcome to Spotify Clip Saver! You must have a Spotify Premium Account
-          and you must Login with Spotify before using this website.
+          and you must Login with Spotify before using this webapp.
         </p>
-        <p className="text-gray-400">
-          After you sign in, you will be brought back to this page but will be
+        <p className="text-gray-400 mb-2">
+          After you sign in, you will be brought back to this page and will be
           able to use any part of the website.
         </p>
-        <p className="text-gray-400"> UI Overhaul coming soon!</p>
+        <p className="text-gray-400"> User interface overhaul coming soon!</p>
       </div>
     </div>
   );

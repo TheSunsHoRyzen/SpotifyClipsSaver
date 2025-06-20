@@ -375,9 +375,9 @@ function Playlists() {
                 </>
               )}
             </div>
+            {loading && <p>Loading...</p>}
           </div>
         </div>
-        {loading && <p>Loading...</p>}
 
         {songs && (
           <div className="pb-[15vh]">

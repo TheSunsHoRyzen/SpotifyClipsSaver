@@ -130,15 +130,64 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
   const handleSaveClip = async () => {
     try {
       // Validate clip times
-      // if (startTime >= endTime) {
-      //   alert("Start time must be less than end time");
-      //   return;
-      // }
+      const start_parts: string[] = startTime.split(":");
+      if (start_parts.length !== 2) return null;
+      const [minStr, secStr] = start_parts;
 
-      // if (startTime < 0 || endTime < 0) {
-      //   alert("Times cannot be negative");
-      //   return;
-      // }
+      const mins: number = Number(minStr);
+      const secs: number = Number(secStr);
+      if (
+        !Number.isFinite(mins) ||
+        !Number.isFinite(secs) ||
+        mins < 0 ||
+        secs < 0 ||
+        secs >= 60
+      ) {
+        alert("Invalid Start Time!");
+        return null;
+      }
+
+      const parsedStartTime = mins * 60 + secs;
+      // Check if start time is longer than the song or less than 0
+      if (
+        parsedStartTime * 1000 > song.track.duration_ms ||
+        parsedStartTime < 0
+      ) {
+        alert("Start time is longer than the song!");
+        return null;
+      }
+
+      const end_parts: string[] = endTime.split(":");
+      if (end_parts.length !== 2) return null;
+      const [endMinStr, endSecStr] = end_parts;
+
+      const endMins: number = Number(endMinStr);
+      const endSecs: number = Number(endSecStr);
+
+      if (
+        !Number.isFinite(endMins) ||
+        !Number.isFinite(endSecs) ||
+        endMins < 0 ||
+        endSecs < 0 ||
+        endSecs >= 60
+      ) {
+        alert("Invalid End Time!");
+        return null;
+      }
+
+      const parsedEndTime = endMins * 60 + endSecs;
+
+      // Check if end time is longer than the song or less than 0
+      if (parsedEndTime * 1000 > song.track.duration_ms || parsedEndTime < 0) {
+        alert("End time is invalid!");
+        return null;
+      }
+      // Check if the start time and end time are equal
+
+      if (parsedEndTime === parsedStartTime) {
+        alert("Start time and end time are the same!");
+        return null;
+      }
 
       const response = await fetch("http://localhost:8080/db/createClip", {
         method: "POST",
@@ -148,8 +197,8 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
         credentials: "include",
         body: JSON.stringify({
           trackUri: song.track.uri,
-          start: startTime,
-          end: endTime,
+          start: parsedStartTime,
+          end: parsedEndTime,
         }),
       });
 

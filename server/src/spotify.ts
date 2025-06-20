@@ -55,28 +55,6 @@ async function ensureValidAccessToken(req: any, res: any, next: any) {
   }
 }
 
-// async function ensureValidAccessToken(req: any, res: any, next: any) {
-//   // console.log("Session data:", req.session);
-//   // console.log("Refresh token in session:", req.session.refreshToken);
-
-//   try {
-//     if (!req.session.refreshToken) {
-//       console.error("No refresh token found in session");
-//       return res
-//         .status(401)
-//         .json({ error: "No refresh token found. Please log in again." });
-//     }
-
-//     if (!req.session.accessToken || Date.now() >= req.session.expiresAt) {
-//       await refreshAccessToken(req);
-//     }
-//     next();
-//   } catch (err) {
-//     console.error("Auth error:", err);
-//     res.status(401).json({ error: "Authentication failed" });
-//   }
-// }
-
 // Protected route using the valid token
 router.get("/me", ensureValidAccessToken, async (req, res) => {
   try {

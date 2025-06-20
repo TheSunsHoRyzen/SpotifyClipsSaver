@@ -21,8 +21,6 @@ const clientId = process.env.SPOTIFY_CLIENT_ID!;
 const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
 const redirectUri = process.env.SPOTIFY_REDIRECT_URI!;
 
-// console.log(clientId);
-// console.log(clientSecret);
 // 1. Redirect to Spotify login
 router.get("/login", (req, res) => {
   const scope =
@@ -65,7 +63,7 @@ router.get("/callback", async (req, res) => {
     req.session.accessToken = access_token;
     req.session.refreshToken = refresh_token;
     req.session.expiresAt = Date.now() + expires_in * 1000;
-    console.log(req.session.accessToken + " IN AUTH");
+    // console.log(req.session.accessToken + " IN AUTH");
 
     res.redirect(process.env.FRONTEND_URL!); // Or send a success response
   } catch (error) {

@@ -39,7 +39,7 @@ router.get("/getClips", ensureValidAccessToken, async (req, res) => {
 router.post("/createClip", ensureValidAccessToken, async (req, res) => {
     try {
         const { trackUri, start, end } = req.body;
-        console.log(trackUri);
+        // console.log(trackUri);
         if (!trackUri || start === undefined || end === undefined) {
             res.status(400).json({ error: "Missing required fields" });
             return;
@@ -108,20 +108,17 @@ router.post("/deleteClip", ensureValidAccessToken, async (req, res) => {
         if (trackDoc.exists) {
             // Update existing track's clips
             const data = trackDoc.data();
-            console.log(data);
             let ids = data?.ids;
-            console.log("IDs: " + ids);
             const index = ids.indexOf(id);
-            console.log(index);
             let startTimes = data?.startTimes;
             let endTimes = data?.endTimes;
             if (index != -1) {
                 startTimes.splice(index, 1);
                 endTimes.splice(index, 1);
                 ids.splice(index, 1);
-                console.log("startTimes: " + startTimes);
-                console.log("endTimes: " + endTimes);
-                console.log("ids: " + ids);
+                // console.log("startTimes: " + startTimes);
+                // console.log("endTimes: " + endTimes);
+                // console.log("ids: " + ids);
                 // Check if the arrays are empty
                 // If they are, delete the document
                 if (startTimes.length === 0) {
@@ -173,7 +170,7 @@ router.post("/deleteOldClip", ensureValidAccessToken, async (req, res) => {
             .collection("clips")
             .doc(trackUri);
         const trackDoc = await trackRef.get();
-        console.log(trackDoc);
+        // console.log(trackDoc);
         if (trackDoc.exists) {
             // Delete the track document
             await trackRef.delete();
