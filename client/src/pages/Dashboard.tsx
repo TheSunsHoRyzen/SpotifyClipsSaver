@@ -12,7 +12,7 @@ function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     // Fetch the user's profile from Spotify
-    fetch("http://localhost:8080/spotify/me", {
+    fetch("https://scsbackend.onrender.com/spotify/me", {
       credentials: "include",
       method: "GET",
     })

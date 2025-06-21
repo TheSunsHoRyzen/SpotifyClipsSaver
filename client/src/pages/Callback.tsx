@@ -11,7 +11,7 @@ const Callback: React.FC = () => {
     const code = searchParams.get("code");
     if (code) {
       // Exchange the authorization code for an access token
-      fetch("http://localhost:8080/auth/callback", {
+      fetch("https://scsbackend.onrender.com/auth/callback", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

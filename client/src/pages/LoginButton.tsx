@@ -2,7 +2,7 @@ import React from "react";
 // The major difference between classes and IDs is that an element can only have one ID. It cannot be repeated on a single page and should not contain any whitespace:
 const LoginButton: React.FC = () => {
   const handleLogin = () => {
-    window.location.href = "http://localhost:8080/auth/login";
+    window.location.href = "https://scsbackend.onrender.com/auth/login";
   };
 
   return (
