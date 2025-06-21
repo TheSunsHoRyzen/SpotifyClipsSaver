@@ -9,7 +9,7 @@ import dbRoutes from "./db.js";
 dotenv.config();
 
 const app = express();
-const PORT = 8080;
+const PORT = 10000;
 
 app.use(
   cors({
@@ -26,7 +26,7 @@ app.use(
     resave: true,
     saveUninitialized: true,
     cookie: {
-      secure: false, // Set to true if using HTTPS
+      secure: true, // Set to true if using HTTPS
       httpOnly: true,
       sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
@@ -40,5 +40,5 @@ app.use("/spotify", spotifyRoutes);
 app.use("/db", dbRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running at ${PORT}`);
 });
