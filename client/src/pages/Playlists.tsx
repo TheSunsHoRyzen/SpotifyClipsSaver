@@ -12,6 +12,7 @@ declare global {
         name: string;
         getOAuthToken: (callback: (token: string | null) => void) => void;
         volume: number;
+        config: {};
       }) => any;
     };
     onSpotifyWebPlaybackSDKReady: () => void;
@@ -65,6 +66,12 @@ function Playlists() {
             });
         },
         volume: 1,
+        // Robustness configuration:
+        config: {
+          playback: {
+            robustness: "SW_SECURE_DECODE",
+          },
+        },
       });
 
       spotifyPlayer.addListener(
@@ -140,15 +147,7 @@ function Playlists() {
       }),
     ])
       .then(([allSongs, allClips]) => {
-        // maybe try it here
-
         setTotal(allSongs.total);
-
-        // allClips:
-        // { uri1: { startTimes: [], endTimes: [], ids: [] }, uri2: { ... } }
-        // new solution, worse run time
-        // loop through all clips, and find the corresponding song in allSongs
-        // if it doesn't exist, call deleteTrack and delete the entire uri for that song
         // if it does exist, add the clips to that song
         const songsWithClips = allSongs.items.map((song: Song) => {
           // suggestion
