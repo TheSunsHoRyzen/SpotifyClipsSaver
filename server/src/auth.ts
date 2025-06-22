@@ -64,6 +64,10 @@ router.get("/callback", async (req, res) => {
     req.session.accessToken = access_token;
     req.session.refreshToken = refresh_token;
     req.session.expiresAt = Date.now() + expires_in * 1000;
+    req.session.save((err) => {
+      if (err) console.error("Session save error:", err);
+    });
+
     // console.log(req.session.accessToken + " IN AUTH");
 
     res.redirect(process.env.FRONTEND_URL!); // Or send a success response
