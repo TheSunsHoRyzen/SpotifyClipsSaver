@@ -30,7 +30,7 @@ const redisStore = new RedisStore({
 client.ping().then(console.log).catch(console.error);
 
 const app = express();
-const PORT = 10000;
+const PORT = Number(process.env.PORT);
 app.set("trust proxy", 1);
 
 app.use(
