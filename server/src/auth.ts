@@ -77,5 +77,9 @@ router.get("/callback", async (req, res) => {
   }
 });
 
+router.get("/debug", (req, res) => {
+  res.json(req.session);
+});
+
 const authRoutes = router;
 export default authRoutes;
