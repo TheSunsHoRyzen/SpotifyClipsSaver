@@ -136,7 +136,7 @@ function Playlists() {
         }
         return response.json();
       }),
-      fetch(`${process.env.REACT_APP_BACKEND_URL}0/db/getClips`, {
+      fetch(`${process.env.REACT_APP_BACKEND_URL}/db/getClips`, {
         credentials: "include",
       }).then((response) => {
         if (!response.ok) {
