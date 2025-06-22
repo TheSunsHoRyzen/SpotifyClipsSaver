@@ -45,8 +45,8 @@ app.use(
   session({
     store: isProduction ? redisStore : undefined,
     secret: process.env.SESSION_SECRET!,
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     cookie: {
       secure: isProduction, // Set to true if using HTTPS
       httpOnly: true,
