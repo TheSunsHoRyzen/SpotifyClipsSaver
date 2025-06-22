@@ -66,6 +66,7 @@ router.get("/me", ensureValidAccessToken, async (req, res) => {
 
     res.json(data);
   } catch (err) {
+    console.error("Error fetching from /spotify/me: ", err);
     res.status(500).json({ error: "Failed to fetch user info" });
   }
 });

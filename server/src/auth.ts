@@ -60,6 +60,7 @@ router.get("/callback", async (req, res) => {
     const { access_token, refresh_token, expires_in } = response.data;
 
     // Save tokens in session
+    console.log("ACCESS TOKEN RECEIVED!: ", access_token);
     req.session.accessToken = access_token;
     req.session.refreshToken = refresh_token;
     req.session.expiresAt = Date.now() + expires_in * 1000;
