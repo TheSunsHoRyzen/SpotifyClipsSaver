@@ -66,12 +66,10 @@ router.post("/callback", async (req, res) => {
     req.session.expiresAt = Date.now() + expires_in * 1000;
     req.session.save((err) => {
       if (err) console.error("Session save error:", err);
+      console.log("Saving session ID:", req.sessionID);
+      res.status(200).json({ success: true }); // Or send a success response
     });
-
     // console.log(req.session.accessToken + " IN AUTH");
-    console.log("Saving session ID:", req.sessionID);
-
-    res.status(200).json({ success: true }); // Or send a success response
   } catch (error) {
     console.error("Token exchange failed", error);
     res.status(500).send("Auth failed");
