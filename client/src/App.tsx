@@ -4,6 +4,7 @@ import LoginButton from "./pages/LoginButton";
 import Dashboard from "./pages/Dashboard";
 import Navbar from "./pages/Navbar";
 import Playlists from "./pages/Playlists";
+import Callback from "./pages/Callback";
 
 const App: React.FC = () => {
   return (
@@ -11,6 +12,7 @@ const App: React.FC = () => {
       <Navbar />
       <Routes>
         <Route path="/" element={<LoginButton />} />
+        <Route path="/callback" element={<Callback />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<div>Page not found!</div>} />
         <Route path="/playlists" element={<Playlists />} />

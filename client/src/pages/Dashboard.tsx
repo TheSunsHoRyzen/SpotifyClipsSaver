@@ -13,8 +13,8 @@ function Dashboard() {
   useEffect(() => {
     // Fetch the user's profile from Spotify
     fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/me`, {
-      method: "GET",
       credentials: "include",
+      method: "GET",
     })
       .then((response) => {
         if (!response.ok) {

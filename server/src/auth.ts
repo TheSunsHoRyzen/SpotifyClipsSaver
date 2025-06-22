@@ -36,8 +36,8 @@ router.get("/login", (req, res) => {
 });
 
 // 2. Callback handler
-router.get("/callback", async (req, res) => {
-  const code = req.query.code as string;
+router.post("/callback", async (req, res) => {
+  const code = req.body.code as string;
 
   try {
     const response = await axios.post(
@@ -71,7 +71,7 @@ router.get("/callback", async (req, res) => {
     // console.log(req.session.accessToken + " IN AUTH");
     console.log("Saving session ID:", req.sessionID);
 
-    res.redirect(process.env.FRONTEND_URL!); // Or send a success response
+    res.status(200).json({ success: true }); // Or send a success response
   } catch (error) {
     console.error("Token exchange failed", error);
     res.status(500).send("Auth failed");
