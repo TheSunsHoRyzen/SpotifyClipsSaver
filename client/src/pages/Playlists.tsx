@@ -4,6 +4,10 @@ import Track from "../components/Track";
 import { Song } from "../types/song";
 import Player from "../components/Player";
 import { PlayerProvider } from "../context/PlayerContext";
+
+import dotenv from "dotenv";
+dotenv.config();
+
 declare global {
   interface Window {
     Spotify: {
