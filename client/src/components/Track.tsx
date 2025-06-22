@@ -32,16 +32,19 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
 
     try {
       // Get player state from backend
-      const playerState = await fetch("http://localhost:8080/spotify/player", {
-        credentials: "include",
-      });
+      const playerState = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/spotify/player`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (playerState.status === 204) {
         console.log("No active device found, transferring playback...");
       }
 
       // Transfer playback using backend
-      await fetch("http://localhost:8080/spotify/player", {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/player`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -58,7 +61,7 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
 
       // Start playback using backend
       const playResponse = await fetch(
-        "http://localhost:8080/spotify/player/play",
+        `${process.env.REACT_APP_BACKEND_URL}/spotify/player/play`,
         {
           method: "PUT",
           headers: {

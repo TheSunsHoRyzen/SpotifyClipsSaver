@@ -47,7 +47,7 @@ function Playlists() {
         name: "Spotify Clip Saver",
         getOAuthToken: (cb: (token: string | null) => void) => {
           // Fetch token from backend
-          fetch("http://localhost:8080/spotify/player-token", {
+          fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/player-token`, {
             credentials: "include",
           })
             .then((response) => {
@@ -117,7 +117,7 @@ function Playlists() {
     // Fetch songs and merge with clips
     Promise.all([
       fetch(
-        `http://localhost:8080/spotify/playlist/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
+        `${process.env.REACT_APP_BACKEND_URL}/spotify/playlist/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
         {
           credentials: "include",
         }
@@ -129,7 +129,7 @@ function Playlists() {
         }
         return response.json();
       }),
-      fetch("http://localhost:8080/db/getClips", {
+      fetch(`${process.env.REACT_APP_BACKEND_URL}0/db/getClips`, {
         credentials: "include",
       }).then((response) => {
         if (!response.ok) {
@@ -197,7 +197,7 @@ function Playlists() {
 
   // Fetch user's public playlists
   useEffect(() => {
-    fetch("http://localhost:8080/spotify/v1/me/playlists/", {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/v1/me/playlists/`, {
       credentials: "include",
       method: "GET",
     })
@@ -250,9 +250,12 @@ function Playlists() {
     let doesClipExist = new Map();
     setLoading(true);
 
-    const response = await fetch("http://localhost:8080/db/getClips", {
-      credentials: "include",
-    });
+    const response = await fetch(
+      `${process.env.REACT_APP_BACKEND_URL}/db/getClips`,
+      {
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to fetch clips");
@@ -267,7 +270,7 @@ function Playlists() {
 
     const repeatingStep = async (tempOffset: number): Promise<Song[]> => {
       const response = await fetch(
-        `http://localhost:8080/spotify/playlist/${selectedPlaylist}/tracks?offset=${tempOffset}&limit=${limit}`,
+        `${process.env.REACT_APP_BACKEND_URL}/spotify/playlist/${selectedPlaylist}/tracks?offset=${tempOffset}&limit=${limit}`,
         {
           credentials: "include",
         }
@@ -297,7 +300,7 @@ function Playlists() {
       if (!value) {
         try {
           const response = await fetch(
-            `http://localhost:8080/db/deleteOldClip?trackUri=${key}`,
+            `${process.env.REACT_APP_BACKEND_URL}/db/deleteOldClip?trackUri=${key}`,
             {
               credentials: "include",
               method: "POST",
