@@ -69,6 +69,7 @@ router.get("/callback", async (req, res) => {
     });
 
     // console.log(req.session.accessToken + " IN AUTH");
+    console.log("Saving session ID:", req.sessionID);
 
     res.redirect(process.env.FRONTEND_URL!); // Or send a success response
   } catch (error) {

@@ -59,6 +59,7 @@ async function ensureValidAccessToken(req: any, res: any, next: any) {
 router.get("/me", ensureValidAccessToken, async (req, res) => {
   try {
     console.log("Session contents:", req.session);
+    console.log("Saving session ID:", req.sessionID);
     const { data } = await axios.get("https://api.spotify.com/v1/me", {
       headers: {
         Authorization: `Bearer ${req.session.accessToken}`,

@@ -50,7 +50,7 @@ app.use(
     cookie: {
       secure: isProduction, // Set to true if using HTTPS
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   })
