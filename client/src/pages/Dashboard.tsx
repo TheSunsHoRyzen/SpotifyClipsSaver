@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from "react";
 
-import dotenv from "dotenv";
-dotenv.config();
-
 interface UserProfile {
   display_name: string;
   email: string;
@@ -15,7 +12,7 @@ function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     // Fetch the user's profile from Spotify
-    fetch(`${process.env.BACKEND_URL}/spotify/me`, {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/me`, {
       credentials: "include",
       method: "GET",
     })

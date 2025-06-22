@@ -1,10 +1,9 @@
 import React from "react";
-import dotenv from "dotenv";
-dotenv.config();
+
 // The major difference between classes and IDs is that an element can only have one ID. It cannot be repeated on a single page and should not contain any whitespace:
 const LoginButton: React.FC = () => {
   const handleLogin = () => {
-    window.location.href = `${process.env.BACKEND_URL}/auth/login`;
+    window.location.href = `${process.env.REACT_APP_BACKEND_URL}/auth/login`;
   };
 
   return (

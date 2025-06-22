@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Song } from "../types/song";
 import { usePlayer } from "../context/PlayerContext";
-import dotenv from "dotenv";
-dotenv.config();
 
 type TrackProps = {
   song: Song;
