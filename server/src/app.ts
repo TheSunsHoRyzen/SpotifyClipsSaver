@@ -43,12 +43,12 @@ app.use(cookieParser());
 
 app.use(
   session({
-    store: isProduction ? redisStore : undefined,
+    store: redisStore,
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: isProduction, // Set to true if using HTTPS
+      secure: true, // Set to true if using HTTPS
       httpOnly: true,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
