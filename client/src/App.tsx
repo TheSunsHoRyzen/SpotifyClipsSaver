@@ -14,8 +14,8 @@ const App: React.FC = () => {
         <Route path="/" element={<LoginButton />} />
         <Route path="/callback" element={<Callback />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="*" element={<div>Page not found!</div>} />
         <Route path="/playlists" element={<Playlists />} />
+        <Route path="*" element={<div>Page not found!</div>} />
       </Routes>
     </div>
   );
