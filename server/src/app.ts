@@ -31,6 +31,7 @@ client.ping().then(console.log).catch(console.error);
 
 const app = express();
 const PORT = 10000;
+app.set("trust proxy", 1);
 
 app.use(
   cors({
