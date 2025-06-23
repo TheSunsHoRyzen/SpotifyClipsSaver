@@ -26,7 +26,7 @@ const LoginButton: React.FC = () => {
         </p>
         <p className="text-gray-400 mb-2">
           After you sign in, you will be brought back to this page and will be
-          able to use any part of the website.
+          able to use any part of the web app.
         </p>
         <p className="text-gray-400"> User interface overhaul coming soon!</p>
       </div>

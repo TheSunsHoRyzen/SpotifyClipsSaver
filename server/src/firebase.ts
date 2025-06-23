@@ -27,8 +27,10 @@ import admin from "firebase-admin";
 import { initializeApp } from "firebase-admin/app";
 
 initializeApp({
-  credential: admin.credential.applicationDefault(),
-  projectId: process.env.FIREBASE_PROJECT_ID,
+  // credential: admin.credential.applicationDefault(),
+  credential: admin.credential.cert(
+    JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS!)
+  ),
 });
 
 const db = admin.firestore();
