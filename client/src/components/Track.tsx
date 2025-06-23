@@ -192,18 +192,21 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
         return null;
       }
 
-      const response = await fetch("http://localhost:8080/db/createClip", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          trackUri: song.track.uri,
-          start: parsedStartTime,
-          end: parsedEndTime,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/db/createClip`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            trackUri: song.track.uri,
+            start: parsedStartTime,
+            end: parsedEndTime,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to save clip");
@@ -228,19 +231,22 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
     try {
       // Validate clip times
 
-      const response = await fetch("http://localhost:8080/db/deleteClip", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          trackUri: song.track.uri,
-          start: start,
-          end: end,
-          id: id,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/db/deleteClip`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            trackUri: song.track.uri,
+            start: start,
+            end: end,
+            id: id,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to delete clip");
@@ -262,7 +268,7 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
 
       try {
         // Transfer playback using backend
-        await fetch("http://localhost:8080/spotify/player", {
+        await fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/player`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -277,18 +283,21 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Start playback using backend
-        await fetch("http://localhost:8080/spotify/player/play", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            device_id: deviceID,
-            uris: [song.track.uri],
-            position_ms: clip.start * 1000,
-          }),
-        });
+        await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/spotify/player/play`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              device_id: deviceID,
+              uris: [song.track.uri],
+              position_ms: clip.start * 1000,
+            }),
+          }
+        );
 
         setCurrentSong({
           ...song.track,
