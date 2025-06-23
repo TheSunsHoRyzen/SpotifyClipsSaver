@@ -30,7 +30,7 @@ function Player({ deviceID }: PlayerProps) {
       if (endpoint === "pause") {
         // Use the pause endpoint
         const response = await fetch(
-          `http://localhost:8080/spotify/player/pause?device_id=${deviceID}`,
+          `${process.env.REACT_APP_BACKEND_URL}/spotify/player/pause?device_id=${deviceID}`,
           {
             method: "PUT",
             headers: {
@@ -55,7 +55,7 @@ function Player({ deviceID }: PlayerProps) {
         console.log(currentSong.position);
         // Use the play endpoint
         const response = await fetch(
-          `http://localhost:8080/spotify/player/play`,
+          `${process.env.REACT_APP_BACKEND_URL}/spotify/player/play`,
           {
             method: "PUT",
             headers: {
@@ -95,10 +95,13 @@ function Player({ deviceID }: PlayerProps) {
     const maxErrors = 3;
     const interval = setInterval(async () => {
       try {
-        const response = await fetch("http://localhost:8080/spotify/player", {
-          credentials: "include",
-          method: "GET",
-        });
+        const response = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/spotify/player`,
+          {
+            credentials: "include",
+            method: "GET",
+          }
+        );
 
         if (response.status === 204) {
           // No active playback - don't change the isPlaying state
