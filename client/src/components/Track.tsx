@@ -333,7 +333,7 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
         //   isClip: true,
         // });
       }
-    }, 900);
+    }, 950);
 
     return () => clearInterval(interval);
   }, [
