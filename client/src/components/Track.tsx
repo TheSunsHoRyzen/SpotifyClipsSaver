@@ -57,7 +57,7 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
       });
 
       // Wait for transfer
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Start playback using backend
       const playResponse = await fetch(
@@ -77,8 +77,12 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
       );
 
       if (!playResponse.ok) {
-        const error = await playResponse.json();
-        console.error("Play response error:", error);
+        try {
+          const error = await playResponse.json();
+          console.error("Play response error:", error);
+        } catch (parseErr) {
+          console.error("Non-JSON play error:", await playResponse.text());
+        }
         throw new Error(`HTTP error! status: ${playResponse.status}`);
       }
 
