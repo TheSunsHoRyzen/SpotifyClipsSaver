@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import ensureValidAccessToken from "./spotify.js";
 import { db } from "./firebase.js"; // Adjust the import path as necessary
 import { v4 as uuidv4 } from "uuid";
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+dotenv.config({ path: envFile });
 dotenv.config();
 const router = express.Router();
 // Get all clips for a user
@@ -52,7 +54,7 @@ router.post("/createClip", ensureValidAccessToken, async (req, res) => {
         });
         const userId = spotifyResponse.data.id;
         // Get the track document reference
-        const userClipsRef = db.collection("users").doc(userId).collection("clips");
+        // const userClipsRef = db.collection("users").doc(userId).collection("clips");
         const trackRef = db
             .collection("users")
             .doc(userId)

@@ -1,9 +1,24 @@
-import React, { useCallback, useEffect, useState } from "react";
-
+// Playlists.tsx
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Track from "../components/Track";
 import { Song } from "../types/song";
 import Player from "../components/Player";
 import { PlayerProvider } from "../context/PlayerContext";
+import {
+  Container,
+  Typography,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  CircularProgress,
+  Alert,
+  Paper,
+} from "@mui/material";
+import { SelectChangeEvent } from "@mui/material/Select";
+import { Delete, NavigateNext, NavigateBefore } from "@mui/icons-material";
 
 declare global {
   interface Window {
@@ -22,32 +37,40 @@ declare global {
 interface Playlist {
   id: string;
   name: string;
-  // Add other playlist properties as needed
 }
 
 function Playlists() {
   const [loading, setLoading] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [total, setTotal] = useState<number>(0);
-  const [songs, setSongs] = useState<Song[]>([]); // previously Object[]
+  const [songs, setSongs] = useState<Song[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const [offset, setOffset] = useState<number>(-1);
   const [player, setPlayer] = useState<any>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const limit = 20;
+
+  // ---------------------------
+  // Updated player setup effect
+  // ---------------------------
   useEffect(() => {
-    // code from spotify to create player
-    const script = document.createElement("script");
-    script.src = "https://sdk.scdn.co/spotify-player.js";
-    script.async = true;
-    document.body.appendChild(script);
+    // Add the SDK script once
+    const scriptId = "spotify-player-script";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    let spotifyPlayer: any;
 
     window.onSpotifyWebPlaybackSDKReady = () => {
-      const spotifyPlayer = new window.Spotify.Player({
+      spotifyPlayer = new window.Spotify.Player({
         name: "Spotify Clip Saver",
         getOAuthToken: (cb: (token: string | null) => void) => {
-          // Fetch token from backend
           fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/player-token`, {
             credentials: "include",
           })
@@ -57,16 +80,13 @@ function Playlists() {
               }
               return response.json();
             })
-            .then((data) => {
-              cb(data.access_token);
-            })
-            .catch((error) => {
-              console.error("Error getting player token:", error);
+            .then((data) => cb(data.access_token))
+            .catch((err) => {
+              console.error("Error getting player token:", err);
               cb(null);
             });
         },
         volume: 1,
-        // Robustness configuration:
         config: {
           playback: {
             robustness: "SW_SECURE_DECODE",
@@ -89,112 +109,28 @@ function Playlists() {
         }
       );
 
-      spotifyPlayer.addListener(
-        "player_state_changed",
-        (state: {
-          paused: boolean;
-          duration: number;
-          track_window: {
-            current_track: {
-              name: string;
-            } | null;
-          };
-        }) => {
-          if (!state) return;
+      spotifyPlayer.addListener("player_state_changed", (state: any) => {
+        if (state) {
+          console.log("Player state changed:", state);
         }
-      );
+      });
 
       spotifyPlayer.connect();
       setPlayer(spotifyPlayer);
     };
 
     return () => {
-      document.body.removeChild(script);
+      try {
+        if (spotifyPlayer && typeof spotifyPlayer.disconnect === "function") {
+          spotifyPlayer.disconnect();
+        }
+      } catch (e) {
+        console.warn("Error during Spotify player cleanup:", e);
+      }
     };
   }, []);
 
-  // fetch all of the clips from the database and save them to local Song type.
-  const fetchClips = useCallback(() => {
-    if (!selectedPlaylist) {
-      return;
-    }
-
-    setLoading(true);
-
-    // Fetch songs and merge with clips
-    Promise.all([
-      fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/spotify/playlist/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
-        {
-          credentials: "include",
-        }
-      ).then((response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Could not get available playlists songs ${response.statusText}`
-          );
-        }
-        return response.json();
-      }),
-      fetch(`${process.env.REACT_APP_BACKEND_URL}/db/getClips`, {
-        credentials: "include",
-      }).then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch clips");
-        }
-
-        return response.json();
-      }),
-    ])
-      .then(([allSongs, allClips]) => {
-        setTotal(allSongs.total);
-        // if it does exist, add the clips to that song
-        const songsWithClips = allSongs.items.map((song: Song) => {
-          // suggestion
-          const songUri = song.track.uri;
-          // Get clips for this song from the clips object
-          const songClips = allClips[songUri] || {
-            startTimes: [],
-            endTimes: [],
-            ids: [],
-          };
-
-          // Ensure startTimes and endTimes are arrays
-          const startTimes = Array.isArray(songClips.startTimes)
-            ? songClips.startTimes
-            : [];
-          const endTimes = Array.isArray(songClips.endTimes)
-            ? songClips.endTimes
-            : [];
-          const ids = Array.isArray(songClips.ids) ? songClips.ids : [];
-
-          // Make sure arrays have the same length
-          const minLength = Math.min(startTimes.length, endTimes.length);
-          const normalizedStartTimes = startTimes.slice(0, minLength);
-          const normalizedEndTimes = endTimes.slice(0, minLength);
-
-          return {
-            ...song,
-            clips: {
-              startTimes: normalizedStartTimes,
-              endTimes: normalizedEndTimes,
-              ids: ids,
-            },
-          };
-        });
-        setSongs(songsWithClips);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err.message);
-        setLoading(false);
-      });
-  }, [selectedPlaylist, offset]);
-  useEffect(() => {
-    fetchClips();
-  }, [selectedPlaylist, offset, fetchClips]);
-
-  // Fetch user's public playlists
+  // Fetch playlists on mount
   useEffect(() => {
     fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/v1/me/playlists/`, {
       credentials: "include",
@@ -217,249 +153,289 @@ function Playlists() {
       });
   }, []);
 
-  const findPlaylistByName = (name: string) => {
-    return playlists.find((playlist: Playlist) => playlist.name === name);
+  // Select handler now uses playlist ID directly
+  const handlePlaylistSelect = (playlistId: string) => {
+    setSelectedPlaylist(playlistId);
+    setOffset(0);
+    setSongs([]);
   };
-  // once user selects playlist, find that playlist in the playlists of Playlist objects
-  const handlePlaylistSelect = (playlistName: string) => {
-    const playlist = findPlaylistByName(playlistName);
-    if (playlist) {
-      setSelectedPlaylist(playlist.id);
-      setOffset(0);
-      setSongs([]);
-    }
-  };
-  // load next page
+
+  // load next/prev page
   const loadNextPage = () => {
     setOffset((prevOffset) =>
       prevOffset + limit <= total ? prevOffset + limit : prevOffset
     );
   };
-  // load previous page
   const loadPrevPage = () => {
     setOffset((prevOffset) =>
       prevOffset - limit > 0 ? prevOffset - limit : 0
     );
   };
 
+  // Delete old clips unchanged
   const deleteOldClips = async () => {
-    if (!selectedPlaylist) {
-      return;
-    }
+    if (!selectedPlaylist) return;
+
     let doesClipExist = new Map();
     setLoading(true);
 
     const response = await fetch(
       `${process.env.REACT_APP_BACKEND_URL}/db/getClips`,
-      {
-        credentials: "include",
-      }
+      { credentials: "include" }
     );
-
     if (!response.ok) {
+      setLoading(false);
       throw new Error("Failed to fetch clips");
     }
 
     const everyClip = await response.json();
-    // allClips = everyClip;
     for (let clip in everyClip) {
-      // console.log(clip + " CLIPS");
       doesClipExist.set(clip, false);
     }
 
     const repeatingStep = async (tempOffset: number): Promise<Song[]> => {
-      const response = await fetch(
+      const r = await fetch(
         `${process.env.REACT_APP_BACKEND_URL}/spotify/playlist/${selectedPlaylist}/tracks?offset=${tempOffset}&limit=${limit}`,
-        {
-          credentials: "include",
-        }
+        { credentials: "include" }
       );
-
-      if (!response.ok) {
+      if (!r.ok) {
         throw new Error(
-          `Could not get available playlist songs: ${response.statusText}`
+          `Could not get available playlist songs: ${r.statusText}`
         );
       }
-
-      const newSongs = await response.json();
+      const newSongs = await r.json();
       return newSongs.items as Song[];
     };
 
     for (let i = 0; i < total; i += limit) {
-      let songs: Song[] = await repeatingStep(i);
-      // console.log(songs);
-      for (const song of Object.values(songs)) {
-        // console.log(song);
-        if (!doesClipExist.get(song.track.uri)) {
-          doesClipExist.set(song.track.uri, true); //set to true if clip exists
-        }
-      }
-    }
-    for (const [key, value] of doesClipExist) {
-      if (!value) {
-        try {
-          const response = await fetch(
-            `${process.env.REACT_APP_BACKEND_URL}/db/deleteOldClip?trackUri=${key}`,
-            {
-              credentials: "include",
-              method: "POST",
-            }
-          );
-          if (!response.ok) {
-            throw new Error(
-              `Could not delete clip from delete song: ${response.statusText}`
-            );
-          }
-        } catch (error) {
-          console.error(error);
+      let pageSongs: Song[] = await repeatingStep(i);
+      for (const song of Object.values(pageSongs)) {
+        if (!doesClipExist.get((song as any).track.uri)) {
+          doesClipExist.set((song as any).track.uri, true);
         }
       }
     }
 
+    for (const [key, value] of doesClipExist) {
+      if (!value) {
+        await fetch(`${process.env.REACT_APP_BACKEND_URL}/db/deleteClip`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            trackUri: key,
+            start: 0,
+            end: 0,
+            id: "all",
+          }),
+        });
+      }
+    }
     setLoading(false);
   };
 
+  // Fetch songs when playlist + offset change
+  useEffect(() => {
+    if (selectedPlaylist && offset >= 0) {
+      setLoading(true);
+      fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/spotify/playlist/${selectedPlaylist}/tracks?offset=${offset}&limit=${limit}`,
+        { credentials: "include" }
+      )
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(
+              `Could not get available playlist songs: ${response.statusText}`
+            );
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const songsWithClips = data.items.map((song: any) => ({
+            ...song,
+            clips: {
+              startTimes: [],
+              endTimes: [],
+              ids: [],
+            },
+          }));
+          setSongs(songsWithClips);
+          setTotal(data.total);
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message);
+          setLoading(false);
+        });
+    }
+  }, [selectedPlaylist, offset]);
+
+  // ---------------------------
+  // Fix B: guarded clips fetch
+  // ---------------------------
+  const arraysEqual = (a?: any[], b?: any[]) =>
+    Array.isArray(a) &&
+    Array.isArray(b) &&
+    a.length === b.length &&
+    a.every((v, i) => v === b[i]);
+
+  const fetchClips = useCallback(async (_uris: string[]) => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/db/getClips`,
+        { credentials: "include" }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch clips");
+      }
+      const clips = await response.json();
+
+      setSongs((prevSongs) =>
+        prevSongs.map((song) => {
+          const nextClips = clips[song.track.uri] ?? {
+            startTimes: [],
+            endTimes: [],
+            ids: [],
+          };
+          const prevClips =
+            song.clips ?? ({ startTimes: [], endTimes: [], ids: [] } as any);
+
+          const unchanged =
+            arraysEqual(prevClips.startTimes, nextClips.startTimes) &&
+            arraysEqual(prevClips.endTimes, nextClips.endTimes) &&
+            arraysEqual(prevClips.ids, nextClips.ids);
+
+          return unchanged ? song : { ...song, clips: nextClips };
+        })
+      );
+    } catch (error) {
+      console.error("Error fetching clips:", error);
+    }
+  }, []);
+
+  // Guard so we only call fetchClips when the set of URIs for the current page changes
+  const lastUrisRef = useRef<string>("");
+  useEffect(() => {
+    if (!songs.length) return;
+    const uris = songs.map((s) => s.track.uri).join(",");
+    if (uris === lastUrisRef.current) return;
+    lastUrisRef.current = uris;
+
+    fetchClips(songs.map((s) => s.track.uri));
+  }, [songs, fetchClips]);
+
+  // Reset the guard when playlist/offset change (ensures new page triggers a fetch)
+  useEffect(() => {
+    lastUrisRef.current = "";
+  }, [selectedPlaylist, offset]);
+
   return (
     <PlayerProvider>
-      <div>
-        <h1 className="flex justify-center items-center text-2xl">
-          Spotify Playlists
-        </h1>
-        <div className="text-center mt-2">
-          {error && <p>Login with Spotify before using this Website!</p>}
-        </div>
-        {/* Dropdown for Playlists */}
-        <div className="flex flex-col items-start gap-4 p-4">
-          <label className="text-lg font-semibold">
-            Choose a playlist from your library:
-          </label>
-          <select
-            className="border-2 rounded-md border-green-500/100 p-2"
-            onChange={(e) => handlePlaylistSelect(e.target.value)}
+      <Container sx={{ py: 4 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Playlists
+          </Typography>
+
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: 3,
+              alignItems: "center",
+            }}
           >
-            <option value="">--Please choose an option--</option>
-            {playlists.map((singlePlaylist: Playlist) => (
-              <option key={singlePlaylist.id} value={singlePlaylist.name}>
-                {singlePlaylist.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Pagination */}
-          <div className="flex items-center gap-4 mt-4 w-full">
-            <div className="flex gap-4">
-              {songs && offset > 0 && !loading && (
-                <button
-                  className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
-                  onClick={loadPrevPage}
+            <Box sx={{ flex: 1, width: "100%" }}>
+              <FormControl fullWidth>
+                <InputLabel>Select Playlist</InputLabel>
+                <Select
+                  value={selectedPlaylist || ""}
+                  label="Select Playlist"
+                  onChange={(e: SelectChangeEvent) =>
+                    handlePlaylistSelect(e.target.value as string)
+                  }
                 >
-                  ← Prev Page
-                </button>
-              )}
+                  {playlists.map((playlist) => (
+                    <MenuItem key={playlist.id} value={playlist.id}>
+                      {playlist.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
 
-              {songs && offset + limit < total && !loading && (
-                <button
-                  className="bg-green-500 p-2 rounded text-white hover:bg-green-600"
-                  onClick={loadNextPage}
-                >
-                  Next Page →
-                </button>
-              )}
-            </div>
-            <div className="mr-10">
-              {songs && offset >= 0 && !loading && (
-                <>
-                  <button onClick={deleteOldClips}>Delete Old Clip</button>
-                  <span className="ml-4 text-gray-400 font-light">
-                    {" "}
-                    ← Click this button to delete clips from songs you remove
-                    from your playlist.
-                  </span>
-                </>
-              )}
-            </div>
-            {loading && <p>Loading...</p>}
-          </div>
-        </div>
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <Button
+                variant="outlined"
+                startIcon={<NavigateBefore />}
+                onClick={loadPrevPage}
+                disabled={offset <= 0}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outlined"
+                endIcon={<NavigateNext />}
+                onClick={loadNextPage}
+                disabled={offset + limit >= total}
+              >
+                Next
+              </Button>
+            </Box>
+          </Box>
+
+          {songs && offset >= 0 && !loading && (
+            <Box sx={{ mt: 3, display: "flex", alignItems: "center", gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<Delete />}
+                onClick={deleteOldClips}
+              >
+                Delete Old Clips
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                Click this button to delete clips from songs you remove from
+                your playlist.
+              </Typography>
+            </Box>
+          )}
+
+          {loading && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+              <CircularProgress />
+            </Box>
+          )}
+        </Paper>
 
         {songs && (
-          <div className="pb-[15vh]">
-            <ul>
-              {(songs as Song[]).map((song: Song) => (
-                <Track
-                  song={song}
-                  deviceID={deviceId}
-                  player={player}
-                  onClipEvent={fetchClips}
-                />
-              ))}
-            </ul>
-          </div>
+          <Box sx={{ pb: 15 }}>
+            {songs.map((song: Song, index: number) => (
+              <Track
+                key={`${song.track.uri}-${index}`}
+                song={song}
+                deviceID={deviceId}
+                player={player}
+                onClipEvent={() =>
+                  fetchClips(
+                    songs.map((s) => s.track.uri) // reuse current page URIs
+                  )
+                }
+              />
+            ))}
+          </Box>
         )}
+
         <Player deviceID={deviceId} />
-      </div>
+      </Container>
     </PlayerProvider>
   );
 }
+
 export default Playlists;
-
-//   1. one collection which has one document
-
-//   document -> {
-//     clips: {
-//       "song uri": {
-//         startTimes: []
-//         endTimes: []
-//       }
-//     }
-//   }
-
-//   2.
-
-//   download the "clips" object from firbease
-
-//   a. you go through each song (by looping through the keys)
-//   b. match song uri with current songs that you have stored in-memory on the client
-//   c. modify it -> add the clips information from the firebase to that specific song
-
-// backend/database
-// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
-//   startTimes: [34,34],
-//   endTimes: [4594,40]
-// }
-
-// 1. get from spotify
-// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
-//   ...songmetadata
-//   clips: {
-//     startTimes: [],
-//     endTimes: []
-//   }
-// }
-
-// 2. add the clips from database
-// clips {
-
-// }
-
-// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
-//   ...songmetadata
-//   clips: {
-//     startTimes: [],
-//     endTimes: []
-//   }
-// }
-
-// 3. then we have the full thing
-// 4.
-
-// frontend:
-// "spotify:track:6rqhFgbbKwnb9MLmUQDhG6": {
-//   ...songmetadata
-//   clips: {
-//     startTimes: [34,34],
-//     endTimes: [4594,40]
-//   }
-// }
-
-// console.log(songs["spotify:track:6rqhFgbbKwnb9MLmUQDh56"].clips.startTime[0]);

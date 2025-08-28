@@ -1,6 +1,13 @@
+import dotenv from "dotenv";
+
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+console.log(envFile);
+dotenv.config({ path: ".env.development" });
+
+const isProduction = process.env.NODE_ENV === "production";
+
 import express from "express";
 import session from "express-session";
-import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./auth.js";
@@ -8,31 +15,9 @@ import spotifyRoutes from "./spotify.js";
 import dbRoutes from "./db.js";
 import { RedisStore } from "connect-redis";
 import { createClient } from "redis";
-
-dotenv.config();
-
-//is production
-const isProduction = process.env.NODE_ENV === "production";
-
-const client = createClient({
-  url: process.env.REDIS_URL,
-});
-
-client.on("error", function (err) {
-  throw err;
-});
-await client.connect();
-
-const redisStore = new RedisStore({
-  client: client,
-});
-
-client.ping().then(console.log).catch(console.error);
-
 const app = express();
-const PORT = Number(process.env.PORT);
-app.set("trust proxy", 1);
-
+const PORT = Number(process.env.PORT) || 3001;
+app.set("trust proxy", 1); // required for secure cookies with proxy
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
@@ -41,27 +26,51 @@ app.use(
 );
 
 app.use(cookieParser());
-
-app.use(
-  session({
-    store: redisStore,
-    secret: process.env.SESSION_SECRET!,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: true, // Set to true if using HTTPS
-      httpOnly: true,
-      sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-  })
-);
-
 app.use(express.json());
-app.use("/auth", authRoutes);
-app.use("/spotify", spotifyRoutes);
-app.use("/db", dbRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server running at ${PORT}`);
+async function main() {
+  let sessionStore;
+
+  if (isProduction) {
+    const redisClient = createClient({
+      url: process.env.REDIS_URL,
+    });
+
+    redisClient.on("error", (err) => {
+      console.error("Redis error:", err);
+    });
+
+    await redisClient.connect();
+
+    sessionStore = new RedisStore({ client: redisClient });
+
+    await redisClient.ping().then(console.log).catch(console.error);
+  }
+
+  app.use(
+    session({
+      store: sessionStore, // undefined in dev, Redis in prod
+      secret: process.env.SESSION_SECRET!,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: isProduction,
+        httpOnly: true,
+        sameSite: isProduction ? "none" : "lax",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      },
+    })
+  );
+
+  app.use("/auth", authRoutes);
+  app.use("/spotify", spotifyRoutes);
+  app.use("/db", dbRoutes);
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+main().catch((err) => {
+  console.error("App failed to start:", err);
 });

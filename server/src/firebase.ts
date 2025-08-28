@@ -1,36 +1,27 @@
-// // Import the functions you need from the SDKs you need
-// import { initializeApp } from "firebase/app";
-// import { getFirestore } from "firebase/firestore";
-// // TODO: Add SDKs for Firebase products that you want to use
-// // https://firebase.google.com/docs/web/setup#available-libraries
-
-// // Your web app's Firebase configuration
-// // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-// const firebaseConfig = {
-//   apiKey: process.env.apiKey,
-//   authDomain: process.env.authDomain,
-//   projectId: process.env.projectId,
-//   storageBucket: process.env.storageBucket,
-//   messagingSenderId: process.env.messagingSenderId,
-//   appId: process.env.appId,
-//   measurementId: process.env.measurementId,
-// };
-
-// // Initialize Firebase
-// const app = initializeApp(firebaseConfig);
-
-// export const db = getFirestore(app);
-
-// using firebase-admin
-
+import dotenv from "dotenv";
 import admin from "firebase-admin";
 import { initializeApp } from "firebase-admin/app";
 
+// Load the correct env file (development, production, etc.)
+// console.log("cwd:", process.cwd());
+
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+console.log("Loading env from:", envFile);
+dotenv.config({ path: envFile });
+
+// Check that the env var exists
+const encoded = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+if (!encoded) {
+  throw new Error("Missing GOOGLE_APPLICATION_CREDENTIALS_B64 in environment");
+}
+
+// Decode and parse the service account JSON
+const decoded = Buffer.from(encoded, "base64").toString("utf-8");
+const credentials = JSON.parse(decoded);
+
+// Initialize Firebase Admin
 initializeApp({
-  // credential: admin.credential.applicationDefault(),
-  credential: admin.credential.cert(
-    JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS!)
-  ),
+  credential: admin.credential.cert(credentials),
 });
 
 const db = admin.firestore();

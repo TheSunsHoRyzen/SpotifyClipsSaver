@@ -3,8 +3,10 @@ import axios from "axios";
 import querystring from "querystring";
 
 import dotenv from "dotenv";
-dotenv.config();
 
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+console.log(envFile);
+dotenv.config({ path: ".env.development" });
 // Extend the Express Session interface
 declare module "express-session" {
   interface SessionData {

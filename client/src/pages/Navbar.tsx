@@ -1,36 +1,54 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { AppBar, Toolbar, Button, Box } from "@mui/material";
 
 const Navbar: React.FC = () => {
   return (
-    <nav className="bg-gray-300 p-4 shadow-md">
-      <ul className="flex space-x-4">
-        <li>
-          <Link
+    <AppBar position="static" sx={{ backgroundColor: "grey.300" }}>
+      <Toolbar>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            component={Link}
             to="/"
-            className="text-gray-800 hover:text-gray-500 hover:underline"
+            sx={{
+              color: "grey.800",
+              "&:hover": {
+                color: "grey.500",
+                textDecoration: "underline",
+              },
+            }}
           >
             Home
-          </Link>
-        </li>
-        <li>
-          <Link
+          </Button>
+          <Button
+            component={Link}
             to="/dashboard"
-            className="text-gray-800 hover:text-gray-500 hover:underline"
+            sx={{
+              color: "grey.800",
+              "&:hover": {
+                color: "grey.500",
+                textDecoration: "underline",
+              },
+            }}
           >
             Dashboard
-          </Link>
-        </li>
-        <li>
-          <Link
+          </Button>
+          <Button
+            component={Link}
             to="/playlists"
-            className="text-gray-800 hover:text-gray-500 hover:underline"
+            sx={{
+              color: "grey.800",
+              "&:hover": {
+                color: "grey.500",
+                textDecoration: "underline",
+              },
+            }}
           >
             Playlists
-          </Link>
-        </li>
-      </ul>
-    </nav>
+          </Button>
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 };
 

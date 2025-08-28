@@ -6,6 +6,10 @@ export type Song = {
     id: number;
     uri: string;
     duration_ms: number;
+    album?: {
+      name: string;
+      images: { url: string }[];
+    };
   };
   clips: {
     startTimes: number[];

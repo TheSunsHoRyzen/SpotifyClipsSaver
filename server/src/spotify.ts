@@ -1,7 +1,11 @@
 import express from "express";
 import axios from "axios";
 import dotenv from "dotenv";
-dotenv.config();
+
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+console.log(envFile);
+dotenv.config({ path: ".env.development" });
+
 const router = express.Router();
 
 async function refreshAccessToken(req: any): Promise<void> {
@@ -204,6 +208,46 @@ router.put("/player/play", ensureValidAccessToken, async (req, res) => {
   } catch (err) {
     console.error("Error playing track:", err);
     res.status(500).json({ error: "Failed to play track" });
+  }
+});
+// Route to seek within the current track
+router.put("/player/seek", ensureValidAccessToken, async (req, res) => {
+  try {
+    // Accept body or query (body is what your frontend uses)
+    let { device_id, position_ms } = req.body || {};
+    if (position_ms == null) position_ms = req.query.position_ms;
+    if (device_id == null) device_id = req.query.device_id;
+
+    const posNum = Number(position_ms);
+    if (!Number.isFinite(posNum) || posNum < 0) {
+      res
+        .status(400)
+        .json({ error: "position_ms must be a non-negative number" });
+    }
+
+    // Build Spotify seek URL: PUT /v1/me/player/seek?position_ms=...&device_id=...
+    const url = new URL("https://api.spotify.com/v1/me/player/seek");
+    url.searchParams.set("position_ms", String(Math.floor(posNum)));
+    if (device_id) url.searchParams.set("device_id", String(device_id));
+
+    // Spotify expects no body; 204 No Content on success
+    await axios.put(url.toString(), null, {
+      headers: {
+        Authorization: `Bearer ${req.session.accessToken}`,
+      },
+    });
+
+    // Normalize success to 204 to mirror Spotify behavior
+    res.status(204).send();
+  } catch (err: any) {
+    if (axios.isAxiosError(err) && err.response) {
+      // Pass through Spotify status when possible for easier debugging
+      res
+        .status(err.response.status)
+        .json({ error: "Seek failed", details: err.response.data });
+    }
+    console.error("Error seeking:", err);
+    res.status(500).json({ error: "Failed to seek" });
   }
 });
 

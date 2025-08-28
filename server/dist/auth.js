@@ -2,7 +2,9 @@ import express from "express";
 import axios from "axios";
 import querystring from "querystring";
 import dotenv from "dotenv";
-dotenv.config();
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+console.log(envFile);
+dotenv.config({ path: ".env.development" });
 const router = express.Router();
 const SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize";
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -21,8 +23,8 @@ router.get("/login", (req, res) => {
     res.redirect(`${SPOTIFY_AUTH_URL}?${queryParams}`);
 });
 // 2. Callback handler
-router.get("/callback", async (req, res) => {
-    const code = req.query.code;
+router.post("/callback", async (req, res) => {
+    const code = req.body.code;
     try {
         const response = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
             grant_type: "authorization_code",
@@ -36,16 +38,25 @@ router.get("/callback", async (req, res) => {
         });
         const { access_token, refresh_token, expires_in } = response.data;
         // Save tokens in session
+        console.log("ACCESS TOKEN RECEIVED!: ", access_token);
         req.session.accessToken = access_token;
         req.session.refreshToken = refresh_token;
         req.session.expiresAt = Date.now() + expires_in * 1000;
+        req.session.save((err) => {
+            if (err)
+                console.error("Session save error:", err);
+            console.log("Saving session ID:", req.sessionID);
+            res.status(200).json({ success: true }); // Or send a success response
+        });
         // console.log(req.session.accessToken + " IN AUTH");
-        res.redirect(process.env.FRONTEND_URL); // Or send a success response
     }
     catch (error) {
         console.error("Token exchange failed", error);
         res.status(500).send("Auth failed");
     }
+});
+router.get("/debug", (req, res) => {
+    res.json(req.session);
 });
 const authRoutes = router;
 export default authRoutes;
