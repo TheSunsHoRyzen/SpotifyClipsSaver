@@ -108,12 +108,12 @@ function Playlists() {
           console.log("Device ID has gone offline", device_id);
         }
       );
-
-      spotifyPlayer.addListener("player_state_changed", (state: any) => {
-        if (state) {
-          console.log("Player state changed:", state);
-        }
-      });
+      // log player state changes for debugging purposes
+      // spotifyPlayer.addListener("player_state_changed", (state: any) => {
+      //   if (state) {
+      //     console.log("Player state changed:", state);
+      //   }
+      // });
 
       spotifyPlayer.connect();
       setPlayer(spotifyPlayer);
@@ -155,6 +155,7 @@ function Playlists() {
 
   // Select handler now uses playlist ID directly
   const handlePlaylistSelect = (playlistId: string) => {
+    window.dispatchEvent(new Event("STOP_CLIP_LOOPS"));
     setSelectedPlaylist(playlistId);
     setOffset(0);
     setSongs([]);

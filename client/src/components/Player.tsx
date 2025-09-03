@@ -100,15 +100,42 @@ function Player({ deviceID }: PlayerProps) {
             const prev = currentSongRef.current;
             if (!prev) return;
 
+            // If this is NOT a clip and we're supposed to start from position 0,
+            // completely ignore Spotify position updates that are way off
+            const isFullSongStarting = !prev.isClip && prev.position === 0;
+
+            // For full songs starting from 0, ignore position updates that are:
+            // 1. Greater than 10 seconds (likely from previous clip)
+            // 2. Or if we just set position to 0 and Spotify reports a large position
+            const shouldIgnoreSpotifyPosition =
+              isFullSongStarting &&
+              data.progress_ms &&
+              (data.progress_ms > 10000 || // More than 10 seconds
+                (prev.position === 0 && data.progress_ms > 1000)); // Position 0 but Spotify says >1 second
+
+            // if (shouldIgnoreSpotifyPosition) {
+            //   console.log(
+            //     `Player polling: Ignoring Spotify position ${data.progress_ms} for full song starting from 0 (prev position: ${prev.position})`
+            //   );
+            // }
+
             const next = {
               ...prev,
               isPlaying: Boolean(data.is_playing), // <- no inversion
-              position:
-                typeof data.progress_ms === "number"
-                  ? data.progress_ms
-                  : prev.position,
+              position: shouldIgnoreSpotifyPosition
+                ? 0 // Keep position 0 when ignoring Spotify position
+                : typeof data.progress_ms === "number"
+                ? data.progress_ms
+                : prev.position,
               album: data.item.album ?? prev.album,
             };
+
+            // Debug logging for position changes
+            // if (prev.position !== next.position) {
+            //   console.log(
+            //     `Player polling: Position changed from ${prev.position} to ${next.position}, isClip: ${prev.isClip}, isPlaying: ${data.is_playing}, spotifyPos: ${data.progress_ms}`
+            //   );
+            // }
 
             setCurrentSong(next);
             currentSongRef.current = next;

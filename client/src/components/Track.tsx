@@ -55,6 +55,12 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
     activeClipRef.current = activeClip;
   }, [activeClip]);
 
+  useEffect(() => {
+    const stopAllLoops = () => clearClipLoop();
+    window.addEventListener("STOP_CLIP_LOOPS", stopAllLoops);
+    return () => window.removeEventListener("STOP_CLIP_LOOPS", stopAllLoops);
+  }, []);
+
   // interval id for looping
   const loopTimerRef = useRef<number | null>(null);
   const loopBusyRef = useRef(false);
@@ -86,6 +92,7 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
 
   // Play full song from beginning (NOT a clip)
   const handlePlay = useCallback(async () => {
+    window.dispatchEvent(new Event("STOP_CLIP_LOOPS"));
     if (!deviceID) {
       console.error("No device ID available");
       return;
@@ -144,8 +151,22 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
         isClip: false,
         album: song.track.album,
       };
-      setCurrentSong(next);
+
+      // console.log("handlePlay: Setting song to position 0, isClip: false");
+
+      // Force update the ref immediately
       currentSongRef.current = next;
+
+      // Update the state
+      setCurrentSong(next);
+
+      // console.log(
+      //   "handlePlay: State updated, currentSongRef.current:",
+      //   currentSongRef.current
+      // );
+
+      // Add a small delay to ensure the state is properly set before any polling interference
+      await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (err) {
       console.error("Error in handlePlay:", err);
     }
@@ -236,7 +257,10 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
 
       try {
         // clear any existing loop before starting a new one
+        // 1) stop THIS row’s loop
         clearClipLoop();
+        // 2) stop EVERY row’s loop (prevents stale intervals from other Tracks)
+        window.dispatchEvent(new Event("STOP_CLIP_LOOPS"));
 
         // ensure playback on this device
         await fetch(`${process.env.REACT_APP_BACKEND_URL}/spotify/player`, {
@@ -398,7 +422,11 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
                   <ListItemText
                     primary={
                       <Chip
-                        label={`${start}s - ${clips.endTimes[index]}s`}
+                        label={`${Math.floor(start / 60)}:${
+                          start % 60
+                        } - ${Math.floor(clips.endTimes[index] / 60)}:${
+                          clips.endTimes[index] % 60
+                        }`}
                         size="small"
                         variant="outlined"
                       />
