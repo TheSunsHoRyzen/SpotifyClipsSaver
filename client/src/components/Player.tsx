@@ -22,6 +22,7 @@ function Player({ deviceID }: PlayerProps) {
     e.preventDefault();
     handlePlayPause();
   };
+  const startFromZeroIgnoreUntilRef = useRef<number>(0);
 
   const handlePlayPause = async () => {
     const cs = currentSongRef.current;
@@ -77,11 +78,9 @@ function Player({ deviceID }: PlayerProps) {
     }
   };
 
-  // Polling: use ref, do not invert is_playing, and avoid functional set
   useEffect(() => {
     if (!currentSong) return;
 
-    const trackKey = currentSong.uri; // run this effect per-track
     let errorCount = 0;
     const maxErrors = 3;
 
@@ -92,6 +91,11 @@ function Player({ deviceID }: PlayerProps) {
           { credentials: "include" }
         );
 
+        if (response.status === 204) {
+          // No active device — do nothing but keep polling a bit
+          return;
+        }
+
         if (response.ok) {
           const data = await response.json();
           errorCount = 0;
@@ -100,42 +104,51 @@ function Player({ deviceID }: PlayerProps) {
             const prev = currentSongRef.current;
             if (!prev) return;
 
-            // If this is NOT a clip and we're supposed to start from position 0,
-            // completely ignore Spotify position updates that are way off
-            const isFullSongStarting = !prev.isClip && prev.position === 0;
+            const now = Date.now();
+            const spotifyPos =
+              typeof data.progress_ms === "number" ? data.progress_ms : null;
 
-            // For full songs starting from 0, ignore position updates that are:
-            // 1. Greater than 10 seconds (likely from previous clip)
-            // 2. Or if we just set position to 0 and Spotify reports a large position
-            const shouldIgnoreSpotifyPosition =
-              isFullSongStarting &&
-              data.progress_ms &&
-              (data.progress_ms > 10000 || // More than 10 seconds
-                (prev.position === 0 && data.progress_ms > 1000)); // Position 0 but Spotify says >1 second
+            // Detect true track change via SDK's current item.uri
+            const sdkUri: string | undefined = data?.item?.uri;
+            const trackChanged = !!sdkUri && !!prev.uri && sdkUri !== prev.uri;
 
-            // if (shouldIgnoreSpotifyPosition) {
-            //   console.log(
-            //     `Player polling: Ignoring Spotify position ${data.progress_ms} for full song starting from 0 (prev position: ${prev.position})`
-            //   );
-            // }
+            if (trackChanged) {
+              // Reset any grace period on real track switches
+              startFromZeroIgnoreUntilRef.current = 0;
+            }
+
+            // If we just started a full song from 0 and no grace window is set, open one.
+            const startingFullFromZero = !prev.isClip && prev.position === 0;
+            if (
+              startingFullFromZero &&
+              startFromZeroIgnoreUntilRef.current === 0
+            ) {
+              startFromZeroIgnoreUntilRef.current = now + 1500; // 1.5s grace window
+            }
+
+            const inGrace = now < startFromZeroIgnoreUntilRef.current;
+            const suspiciousJump = spotifyPos !== null && spotifyPos > 1000; // >1s away from 0
+            const shouldIgnoreSpotifyPosition = inGrace && suspiciousJump;
 
             const next = {
               ...prev,
-              isPlaying: Boolean(data.is_playing), // <- no inversion
+              isPlaying: Boolean(data.is_playing), // no inversion
               position: shouldIgnoreSpotifyPosition
-                ? 0 // Keep position 0 when ignoring Spotify position
-                : typeof data.progress_ms === "number"
-                ? data.progress_ms
+                ? 0
+                : spotifyPos !== null
+                ? spotifyPos
                 : prev.position,
-              album: data.item.album ?? prev.album,
+              album: data.item?.album ?? prev.album,
+              // If you want to mirror SDK item fields (optional, keeps UI fresh):
+              uri: prev.uri ?? data.item?.uri,
+              name: prev.name ?? data.item?.name,
+              artists: prev.artists ?? data.item?.artists,
             };
 
-            // Debug logging for position changes
-            // if (prev.position !== next.position) {
-            //   console.log(
-            //     `Player polling: Position changed from ${prev.position} to ${next.position}, isClip: ${prev.isClip}, isPlaying: ${data.is_playing}, spotifyPos: ${data.progress_ms}`
-            //   );
-            // }
+            // If we accepted Spotify's position (i.e., not ignoring), clear the grace window
+            if (!shouldIgnoreSpotifyPosition) {
+              startFromZeroIgnoreUntilRef.current = 0;
+            }
 
             setCurrentSong(next);
             currentSongRef.current = next;

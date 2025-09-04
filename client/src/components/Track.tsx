@@ -150,6 +150,9 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
         isPlaying: true,
         isClip: false,
         album: song.track.album,
+        uri: song.track.uri, // add
+        name: song.track.name, // add
+        artists: song.track.artists, // add
       };
 
       // console.log("handlePlay: Setting song to position 0, isClip: false");
@@ -295,6 +298,9 @@ function Track({ song, deviceID, player, onClipEvent }: TrackProps) {
           isPlaying: true,
           isClip: true,
           album: song.track.album,
+          uri: song.track.uri,
+          name: song.track.name,
+          artists: song.track.artists,
         };
         setCurrentSong(nextPlay);
         currentSongRef.current = nextPlay;
