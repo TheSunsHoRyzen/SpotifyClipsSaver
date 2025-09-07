@@ -61,7 +61,7 @@ router.get("/callback", async (req, res, next) => {
 
     const { access_token, refresh_token, expires_in } = data;
     req.session.accessToken = access_token;
-    req.session.refreshToken = refresh_token;
+    req.session.refreshToken = refresh_token; // may be undefined on later grants
     req.session.expiresAt = Date.now() + expires_in * 1000;
 
     await new Promise<void>((resolve, reject) =>

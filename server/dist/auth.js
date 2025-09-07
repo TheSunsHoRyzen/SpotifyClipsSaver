@@ -4,7 +4,7 @@ import querystring from "querystring";
 import dotenv from "dotenv";
 const envFile = `.env.${process.env.NODE_ENV || "development"}`;
 console.log(envFile);
-dotenv.config({ path: ".env.development" });
+dotenv.config({ path: envFile });
 const router = express.Router();
 const SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize";
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -24,9 +24,11 @@ router.get("/login", (req, res) => {
 });
 // 2. Callback handler
 router.post("/callback", async (req, res) => {
-    const code = req.body.code;
+    const code = req.body?.code;
+    if (!code)
+        res.status(400).json({ error: "Missing auth code" });
     try {
-        const response = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
+        const tokenRes = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
             grant_type: "authorization_code",
             code,
             redirect_uri: redirectUri,
@@ -36,23 +38,22 @@ router.post("/callback", async (req, res) => {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
         });
-        const { access_token, refresh_token, expires_in } = response.data;
-        // Save tokens in session
-        console.log("ACCESS TOKEN RECEIVED!: ", access_token);
+        const { access_token, refresh_token, expires_in } = tokenRes.data;
         req.session.accessToken = access_token;
-        req.session.refreshToken = refresh_token;
+        req.session.refreshToken = refresh_token; // may be undefined on later grants
         req.session.expiresAt = Date.now() + expires_in * 1000;
         req.session.save((err) => {
-            if (err)
+            if (err) {
                 console.error("Session save error:", err);
-            console.log("Saving session ID:", req.sessionID);
-            res.status(200).json({ success: true }); // Or send a success response
+                res.status(500).json({ error: "Session save failed" });
+            }
+            // Send a tiny JSON ok — frontend can now hit /spotify/me
+            res.status(200).json({ ok: true });
         });
-        // console.log(req.session.accessToken + " IN AUTH");
     }
-    catch (error) {
-        console.error("Token exchange failed", error);
-        res.status(500).send("Auth failed");
+    catch (e) {
+        console.error("Token exchange failed:", e);
+        res.status(500).json({ error: "Auth failed" });
     }
 });
 router.get("/debug", (req, res) => {

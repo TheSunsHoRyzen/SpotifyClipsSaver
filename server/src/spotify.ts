@@ -36,6 +36,9 @@ async function refreshAccessToken(req: any): Promise<void> {
 
   req.session.accessToken = access_token;
   req.session.expiresAt = Date.now() + expires_in * 1000;
+  await new Promise<void>((resolve, reject) =>
+    req.session.save((err: any) => (err ? reject(err) : resolve()))
+  );
 
   console.log("🔁 Refreshed access token");
 }
@@ -68,14 +71,14 @@ router.get("/me", ensureValidAccessToken, async (req, res) => {
       res.status(401).json({ error: "No access token in session" });
     }
     const { data } = await axios.get("https://api.spotify.com/v1/me", {
-      headers: {
-        Authorization: `Bearer ${req.session.accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${req.session.accessToken}` },
     });
-
     res.json(data);
   } catch (err) {
-    console.error("Error fetching from /spotify/me: ", err);
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      res.status(401).json({ error: "Invalid/expired token" });
+    }
+    console.error("Error fetching /v1/me:", err);
     res.status(500).json({ error: "Failed to fetch user info" });
   }
 });
