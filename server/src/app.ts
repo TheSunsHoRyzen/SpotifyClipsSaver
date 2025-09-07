@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 
 const envFile = `.env.${process.env.NODE_ENV || "development"}`;
 console.log(envFile);
-dotenv.config({ path: ".env.development" });
+dotenv.config({ path: envFile });
 
 const isProduction = process.env.NODE_ENV === "production";
 
