@@ -62,8 +62,11 @@ async function ensureValidAccessToken(req: any, res: any, next: any) {
 // Protected route using the valid token
 router.get("/me", ensureValidAccessToken, async (req, res) => {
   try {
-    console.log("Session contents:", req.session);
+    // console.log("Session contents:", req.session);
     console.log("Reading session ID:", req.sessionID);
+    if (!req.session.accessToken) {
+      res.status(401).json({ error: "No access token in session" });
+    }
     const { data } = await axios.get("https://api.spotify.com/v1/me", {
       headers: {
         Authorization: `Bearer ${req.session.accessToken}`,

@@ -15,6 +15,7 @@ import spotifyRoutes from "./spotify.js";
 import dbRoutes from "./db.js";
 import { RedisStore } from "connect-redis";
 import { createClient } from "redis";
+
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 app.set("trust proxy", 1); // required for secure cookies with proxy
@@ -49,6 +50,7 @@ async function main() {
 
   app.use(
     session({
+      name: "session",
       store: sessionStore, // undefined in dev, Redis in prod
       secret: process.env.SESSION_SECRET!,
       resave: false,
