@@ -23,12 +23,11 @@ router.get("/login", (req, res) => {
     res.redirect(`${SPOTIFY_AUTH_URL}?${queryParams}`);
 });
 // 2. Callback handler
-router.post("/callback", async (req, res) => {
-    const code = req.body?.code;
-    if (!code)
-        res.status(400).json({ error: "Missing auth code" });
+// auth.ts
+router.get("/callback", async (req, res, next) => {
+    const code = req.query.code;
     try {
-        const tokenRes = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
+        const { data } = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
             grant_type: "authorization_code",
             code,
             redirect_uri: redirectUri,
@@ -38,22 +37,16 @@ router.post("/callback", async (req, res) => {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
         });
-        const { access_token, refresh_token, expires_in } = tokenRes.data;
+        const { access_token, refresh_token, expires_in } = data;
         req.session.accessToken = access_token;
         req.session.refreshToken = refresh_token; // may be undefined on later grants
         req.session.expiresAt = Date.now() + expires_in * 1000;
-        req.session.save((err) => {
-            if (err) {
-                console.error("Session save error:", err);
-                res.status(500).json({ error: "Session save failed" });
-            }
-            // Send a tiny JSON ok — frontend can now hit /spotify/me
-            res.status(200).json({ ok: true });
-        });
+        await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
+        // After cookie is persisted, send the user back to your app
+        res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
     }
-    catch (e) {
-        console.error("Token exchange failed:", e);
-        res.status(500).json({ error: "Auth failed" });
+    catch (err) {
+        next(err);
     }
 });
 router.get("/debug", (req, res) => {

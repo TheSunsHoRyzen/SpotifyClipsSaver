@@ -35,6 +35,7 @@ async function main() {
         await redisClient.ping().then(console.log).catch(console.error);
     }
     app.use(session({
+        name: "session",
         store: sessionStore, // undefined in dev, Redis in prod
         secret: process.env.SESSION_SECRET,
         resave: false,
