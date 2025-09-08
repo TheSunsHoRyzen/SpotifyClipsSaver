@@ -69,6 +69,7 @@ function Dashboard() {
       {error && !userProfile && (
         <Alert severity="info" sx={{ mb: 3 }}>
           Loading... Please Login with Spotify before using this Website!
+          {error}
         </Alert>
       )}
       {userProfile && (
