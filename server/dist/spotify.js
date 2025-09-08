@@ -5,67 +5,138 @@ const envFile = `.env.${process.env.NODE_ENV || "development"}`;
 console.log(envFile);
 dotenv.config({ path: envFile });
 const router = express.Router();
-async function refreshAccessToken(req) {
-    const refreshToken = req.session.refreshToken;
-    if (!refreshToken)
+// async function refreshAccessToken(req: any): Promise<void> {
+//   const refreshToken = req.session.refreshToken;
+//   if (!refreshToken) throw new Error("No refresh token");
+//   const clientId = process.env.SPOTIFY_CLIENT_ID!;
+//   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
+//   const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString(
+//     "base64"
+//   );
+//   const response = await axios.post(
+//     "https://accounts.spotify.com/api/token",
+//     new URLSearchParams({
+//       grant_type: "refresh_token",
+//       refresh_token: refreshToken,
+//     }),
+//     {
+//       headers: {
+//         Authorization: `Basic ${basicAuth}`,
+//         "Content-Type": "application/x-www-form-urlencoded",
+//       },
+//     }
+//   );
+//   const { access_token, expires_in } = response.data;
+//   req.session.accessToken = access_token;
+//   req.session.expiresAt = Date.now() + expires_in * 1000;
+//   await new Promise<void>((resolve, reject) =>
+//     req.session.save((err: any) => (err ? reject(err) : resolve()))
+//   );
+//   console.log("🔁 Refreshed access token");
+// }
+// // Middleware to check and refresh token
+// async function ensureValidAccessToken(req: any, res: any, next: any) {
+//   const { accessToken, refreshToken, expiresAt } = req.session;
+//   const isExpired = !accessToken || Date.now() >= expiresAt;
+//   if (isExpired && refreshToken) {
+//     try {
+//       await refreshAccessToken(req);
+//       next();
+//     } catch (err) {
+//       console.error("Failed to refresh token", err);
+//       return res.status(401).json({ error: "Token refresh failed" });
+//     }
+//   } else {
+//     next();
+//   }
+// }
+// Refresh helper
+const refreshAccessToken = async (req) => {
+    const rt = req.session.refreshToken;
+    if (!rt)
         throw new Error("No refresh token");
-    const clientId = process.env.SPOTIFY_CLIENT_ID;
-    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-    const response = await axios.post("https://accounts.spotify.com/api/token", new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-    }), {
+    const basic = Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64");
+    const { data } = await axios.post("https://accounts.spotify.com/api/token", new URLSearchParams({ grant_type: "refresh_token", refresh_token: rt }), {
         headers: {
-            Authorization: `Basic ${basicAuth}`,
+            Authorization: `Basic ${basic}`,
             "Content-Type": "application/x-www-form-urlencoded",
         },
     });
-    const { access_token, expires_in } = response.data;
-    req.session.accessToken = access_token;
-    req.session.expiresAt = Date.now() + expires_in * 1000;
+    // Access token (required) + optional refresh token rotation
+    req.session.accessToken = data.access_token;
+    if (data.refresh_token) {
+        req.session.refreshToken = data.refresh_token;
+    }
+    req.session.expiresAt = Date.now() + data.expires_in * 1000;
     await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
     console.log("🔁 Refreshed access token");
-}
-// Middleware to check and refresh token
-async function ensureValidAccessToken(req, res, next) {
-    const { accessToken, refreshToken, expiresAt } = req.session;
-    const isExpired = !accessToken || Date.now() >= expiresAt;
-    if (isExpired && refreshToken) {
-        try {
+};
+// Middleware
+export const ensureValidAccessToken = async (req, res, next) => {
+    try {
+        const { accessToken, refreshToken, expiresAt } = req.session;
+        // If we have neither token, reject immediately
+        if (!accessToken && !refreshToken) {
+            res.status(401).json({ error: "Not authenticated" });
+            return;
+        }
+        // Refresh a minute early; also refresh if expiresAt is missing/invalid
+        const now = Date.now();
+        const invalidExpiry = typeof expiresAt !== "number" || !Number.isFinite(expiresAt);
+        const needsRefresh = !accessToken || invalidExpiry || now + 60000 >= expiresAt;
+        if (needsRefresh) {
+            if (!refreshToken) {
+                res.status(401).json({ error: "Session expired (no refresh token)" });
+                return;
+            }
             await refreshAccessToken(req);
-            next();
         }
-        catch (err) {
-            console.error("Failed to refresh token", err);
-            return res.status(401).json({ error: "Token refresh failed" });
-        }
-    }
-    else {
         next();
     }
-}
-// Protected route using the valid token
-router.get("/me", ensureValidAccessToken, async (req, res) => {
+    catch (err) {
+        console.error("Failed to ensure valid access token:", err?.response?.data || err);
+        res.status(401).json({ error: "Token refresh failed" });
+        return;
+    }
+};
+// spotify.ts
+const getMe = async (req, res) => {
     try {
-        // console.log("Session contents:", req.session);
-        console.log("Reading session ID:", req.sessionID);
-        if (!req.session.accessToken) {
-            res.status(401).json({ error: "No access token in session" });
-        }
+        const token = req.session.accessToken;
         const { data } = await axios.get("https://api.spotify.com/v1/me", {
-            headers: { Authorization: `Bearer ${req.session.accessToken}` },
+            headers: { Authorization: `Bearer ${token}` },
         });
-        res.json(data);
+        res.json(data); // send
+        return; // then exit (void)
     }
     catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 401) {
-            res.status(401).json({ error: "Invalid/expired token" });
-        }
-        console.error("Error fetching /v1/me:", err);
-        res.status(500).json({ error: "Failed to fetch user info" });
+        const status = err?.response?.status ?? 500;
+        console.error("Spotify /me failed:", status, err?.response?.data || err.message);
+        res.status(status).json({ error: "Failed to fetch profile" });
+        return;
     }
-});
+};
+router.get("/me", ensureValidAccessToken, getMe);
+// Protected route using the valid token
+// router.get("/me", ensureValidAccessToken, async (req, res) => {
+//   try {
+//     // console.log("Session contents:", req.session);
+//     console.log("Reading session ID:", req.sessionID);
+//     if (!req.session.accessToken) {
+//       res.status(401).json({ error: "No access token in session" });
+//     }
+//     const { data } = await axios.get("https://api.spotify.com/v1/me", {
+//       headers: { Authorization: `Bearer ${req.session.accessToken}` },
+//     });
+//     res.json(data);
+//   } catch (err) {
+//     if (axios.isAxiosError(err) && err.response?.status === 401) {
+//       res.status(401).json({ error: "Invalid/expired token" });
+//     }
+//     console.error("Error fetching /v1/me:", err);
+//     res.status(500).json({ error: "Failed to fetch user info" });
+//   }
+// });
 router.get("/v1/me/playlists/", ensureValidAccessToken, async (req, res) => {
     try {
         const { data } = await axios.get("https://api.spotify.com/v1/me/playlists/", {

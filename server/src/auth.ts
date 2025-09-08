@@ -39,7 +39,7 @@ router.get("/login", (req, res) => {
 
 // 2. Callback handler
 // auth.ts
-router.get("/callback", async (req, res, next) => {
+const callback: express.RequestHandler = async (req, res, next) => {
   const code = req.query.code as string;
   try {
     const { data } = await axios.post(
@@ -70,10 +70,13 @@ router.get("/callback", async (req, res, next) => {
 
     // After cookie is persisted, send the user back to your app
     res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    return;
   } catch (err) {
     next(err);
   }
-});
+};
+
+router.get("/callback", callback);
 
 router.get("/debug", (req, res) => {
   res.json(req.session);

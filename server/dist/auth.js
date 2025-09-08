@@ -24,7 +24,7 @@ router.get("/login", (req, res) => {
 });
 // 2. Callback handler
 // auth.ts
-router.get("/callback", async (req, res, next) => {
+const callback = async (req, res, next) => {
     const code = req.query.code;
     try {
         const { data } = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
@@ -44,11 +44,13 @@ router.get("/callback", async (req, res, next) => {
         await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
         // After cookie is persisted, send the user back to your app
         res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+        return;
     }
     catch (err) {
         next(err);
     }
-});
+};
+router.get("/callback", callback);
 router.get("/debug", (req, res) => {
     res.json(req.session);
 });
