@@ -1,17 +1,37 @@
- ### Spotify Clips Saver - deployed at clips.hasanali.dev *!
+# 🎶 Spotify Clip Saver
 
- #### This is a full stack web application created to allow musicians to learn new music faster. 
- It allows users to log in with their Spotify Account and to save time stamps for portions of 
- songs they'd like to be played on repeat. Users can then easily play and pause their clips, and 
- delete and create new clips.
+Save and organize your favorite snippets of Spotify tracks to practice, revisit, and share.  
+Built to allow musicians to transcribe musical lines faster by automating song clip repetition.
 
- #### Tech Stack:
-##### Frontend: React.js, TailwindCSS
-##### Backend: Express.js, Axios, Firebase/Firestore
-##### Deployed using Render.
+---
 
-###
-** Unfortunately, Spotify stopped receiving applications from individual developers for public use of their APIs meaning that only useres added as a developer can use Spotify Clips Saver. **
+This web app is deployed to clips.hasanali.dev, but unfortunately cannot be used 
 
 
+## 🛠️ Tech Stack
+
+**Frontend**  
+- [React](https://reactjs.org/) – component-based UI  
+-  [Material UI](https://mui.com/) – clean, responsive design  
+
+**Backend**  
+-  [Express.js](https://expressjs.com/) – REST API & Spotify integration  
+
+**Database / Auth**  
+-  [Firestore / Firebase](https://firebase.google.com/) – user data & clip storage  
+- [Spotify Web API](https://developer.spotify.com/documentation/web-api) - Retrieving user data & playing tracks
+
+**Deployment & Hosting**  
+-  [Render](https://render.com/) – backend deployment  
+-  [Cloudflare](https://www.cloudflare.com/) – frontend hosting & domain  
+- [Docker](https://www.docker.com/) - containerizing the app
+
+---
+
+## 📸 Video
+
+https://github.com/user-attachments/assets/6e37a140-fac8-436c-b247-96df72daf2af
+
+
+---
 
